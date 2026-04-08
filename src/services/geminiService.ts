@@ -5,7 +5,7 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-const apiKey = process.env.GEMINI_API_KEY;
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
 export async function generateCaption(params: {
   contentTitle: string;
@@ -16,11 +16,11 @@ export async function generateCaption(params: {
   customPrompt?: string;
 }) {
   if (!apiKey) {
-    throw new Error("Gemini API key is missing. Please configure it in the AI Studio secrets panel.");
+    throw new Error("Gemini API key is missing. Please configure VITE_GEMINI_API_KEY in your environment.");
   }
 
   const ai = new GoogleGenAI({ apiKey });
-  const model = "gemini-3-flash-preview";
+  const model = "gemini-2.0-flash";
 
   const prompt = `
     You are an expert social media manager for a legal and educational platform (STLAF).
