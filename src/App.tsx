@@ -328,6 +328,7 @@ interface MonthlyTableViewProps {
   setPreviewImage: (url: string | null) => void;
   handleOpenModal: (post?: Post) => void;
   handleDeletePost: (id: string) => void;
+  searchQuery?: string;
 }
 
 const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
@@ -349,12 +350,19 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
   copiedId,
   setPreviewImage,
   handleOpenModal,
-  handleDeletePost
+  handleDeletePost,
+  searchQuery = ''
 }) => {
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(monthStart);
-  const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  const allDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
   const visibleColumns = tableColumns.filter(c => c.visible);
+
+  // If searching, only show days that have matching posts.
+  // Otherwise show all days of the month.
+  const days = searchQuery.trim() 
+    ? allDays.filter(day => posts.some(p => p.date === format(day, 'yyyy-MM-dd')))
+    : allDays;
 
   const renderCell = (post: Post, colId: ColumnId, day: Date, pIdx: number) => {
     const isToday = isSameDay(day, new Date());
@@ -1208,7 +1216,7 @@ export default function App() {
             <MonthlyTableView 
               currentMonth={currentMonth}
               tableColumns={tableColumns}
-              posts={posts}
+              posts={filteredPosts}
               handleUpdatePostInline={handleUpdatePostInline}
               handleCreateForDate={handleCreateForDate}
               showColumnSettings={showColumnSettings}
@@ -1225,6 +1233,7 @@ export default function App() {
               setPreviewImage={setPreviewImage}
               handleOpenModal={handleOpenModal}
               handleDeletePost={handleDeletePost}
+              searchQuery={searchQuery}
             />
           )}
           {viewMode === 'kanban' && (
@@ -1237,7 +1246,7 @@ export default function App() {
           {viewMode === 'calendar' && (
             <CalendarView 
               currentMonth={currentMonth}
-              posts={posts}
+              posts={filteredPosts}
               handleCreateForDate={handleCreateForDate}
               handleOpenModal={handleOpenModal}
             />
