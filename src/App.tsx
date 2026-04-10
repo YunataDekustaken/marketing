@@ -582,12 +582,12 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
                     <button 
                       onClick={() => setTableColumns([
                         { id: 'date', label: 'Date', width: 'w-32', visible: true },
+                        { id: 'creatives', label: 'Creatives', width: 'w-32', visible: true },
                         { id: 'contentTitle', label: 'Content Title', width: 'w-40', visible: true },
                         { id: 'contentType', label: 'Type', width: 'w-40', visible: true },
                         { id: 'topicTheme', label: 'Topic / Theme', width: 'w-64', visible: true },
                         { id: 'subtopic', label: 'Subtopic', width: 'w-48', visible: false },
                         { id: 'caption', label: 'Caption', width: 'w-64', visible: true },
-                        { id: 'creatives', label: 'Creatives', width: 'w-32', visible: true },
                         { id: 'format', label: 'Format', width: 'w-40', visible: true },
                         { id: 'status', label: 'Status', width: 'w-44', visible: true },
                         { id: 'funnelStatus', label: 'Funnel', width: 'w-40', visible: false },
@@ -727,12 +727,12 @@ export default function App() {
   const [isColumnsLocked, setIsColumnsLocked] = useState(true);
   const [tableColumns, setTableColumns] = useState<TableColumn[]>([
     { id: 'date', label: 'Date', width: 'w-32', visible: true },
+    { id: 'creatives', label: 'Creatives', width: 'w-32', visible: true },
     { id: 'contentTitle', label: 'Content Title', width: 'w-40', visible: true },
     { id: 'contentType', label: 'Type', width: 'w-40', visible: true },
     { id: 'topicTheme', label: 'Topic / Theme', width: 'w-64', visible: true },
     { id: 'subtopic', label: 'Subtopic', width: 'w-48', visible: false },
     { id: 'caption', label: 'Caption', width: 'w-64', visible: true },
-    { id: 'creatives', label: 'Creatives', width: 'w-32', visible: true },
     { id: 'format', label: 'Format', width: 'w-40', visible: true },
     { id: 'status', label: 'Status', width: 'w-44', visible: true },
     { id: 'funnelStatus', label: 'Funnel', width: 'w-40', visible: false },
