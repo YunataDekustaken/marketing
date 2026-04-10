@@ -23,6 +23,7 @@ export interface Post {
   customPrompt?: string;
   notes?: string;
   imageUrl?: string; // For backward compatibility or specific use cases
+  userId?: string; // The ID of the user who owns this post
   [key: string]: any; // Allow for custom dynamic columns
 }
 
