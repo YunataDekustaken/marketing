@@ -20,7 +20,7 @@ export async function generateCaption(params: {
   }
 
   const ai = new GoogleGenAI({ apiKey });
-  const model = "gemini-2.5-flash";
+  const model = "gemini-3-flash-preview";
 
   const prompt = `
     You are an expert social media manager for a legal and educational platform (STLAF).
