@@ -424,15 +424,24 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
               rows={1}
               className="w-full bg-transparent border-none text-xs text-slate-600 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none hover:bg-slate-100 resize-none min-h-[32px] overflow-hidden line-clamp-2 focus:line-clamp-none focus:min-h-[80px]"
             />
-            {post.caption && (
+            <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover/caption:opacity-100 transition-opacity">
+              {post.caption && (
+                <button 
+                  onClick={() => handleCopy(post.caption!, post.id)}
+                  className="p-1 bg-white/80 border border-slate-200 rounded shadow-sm hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+                  title="Copy Caption"
+                >
+                  {copiedId === post.id ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                </button>
+              )}
               <button 
-                onClick={() => handleCopy(post.caption!, post.id)}
-                className="absolute top-1 right-1 p-1 bg-white/80 border border-slate-200 rounded shadow-sm opacity-0 group-hover/caption:opacity-100 transition-opacity hover:bg-indigo-50 hover:text-indigo-600"
-                title="Copy Caption"
+                onClick={() => handleOpenModal(post)}
+                className="p-1 bg-white/80 border border-slate-200 rounded shadow-sm hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+                title="Edit Post"
               >
-                {copiedId === post.id ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                <Edit2 className="w-3 h-3" />
               </button>
-            )}
+            </div>
           </div>
         );
       case 'creatives':
