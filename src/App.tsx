@@ -83,6 +83,546 @@ const STATUS_ICONS: Record<PostStatus, any> = {
   'Scheduled': CheckCircle2,
 };
 
+interface KanbanViewProps {
+  filteredPosts: Post[];
+  setFormData: Dispatch<SetStateAction<Partial<Post>>>;
+  handleOpenModal: (post?: Post) => void;
+}
+
+const KanbanView: React.FC<KanbanViewProps> = ({ filteredPosts, setFormData, handleOpenModal }) => {
+  const statuses: PostStatus[] = ['Not Started', 'In Progress', 'Ready for Review', 'Scheduled'];
+  
+  return (
+    <div className="flex gap-6 overflow-x-auto pb-6 min-h-[600px]">
+      {statuses.map(status => {
+        const statusPosts = filteredPosts.filter(p => p.status === status);
+        const StatusIcon = STATUS_ICONS[status];
+        
+        return (
+          <div key={status} className="flex-shrink-0 w-80 flex flex-col gap-4">
+            <div className="flex items-center justify-between px-2">
+              <div className="flex items-center gap-2">
+                <span className={`p-1 rounded-md border ${STATUS_COLORS[status]}`}>
+                  <StatusIcon className="w-4 h-4" />
+                </span>
+                <h3 className="font-semibold text-slate-700">{status}</h3>
+                <span className="text-xs font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                  {statusPosts.length}
+                </span>
+              </div>
+              <button 
+                onClick={() => {
+                  setFormData(prev => ({ ...prev, status }));
+                  handleOpenModal();
+                }}
+                className="p-1 hover:bg-slate-200 rounded-md text-slate-400 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="flex flex-col gap-3">
+              {statusPosts.map(post => (
+                <motion.div 
+                  layout
+                  key={post.id}
+                  onClick={() => handleOpenModal(post)}
+                  className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer group"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50 px-2 py-0.5 rounded">
+                      {post.contentTitle}
+                    </span>
+                    <div className="text-[10px] text-slate-400 font-medium">
+                      {format(new Date(post.date), 'MMM d')}
+                    </div>
+                  </div>
+                  <h4 className="text-sm font-semibold text-slate-800 mb-2 line-clamp-2">
+                    {post.topicTheme || "Untitled Content"}
+                  </h4>
+                  <div className="flex items-center justify-between">
+                    <div className="flex -space-x-1.5">
+                      {post.creatives?.slice(0, 3).map((c, i) => (
+                        <div key={i} className="h-6 w-6 rounded-full border-2 border-white overflow-hidden bg-slate-100">
+                          <img src={c} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                        </div>
+                      ))}
+                    </div>
+                    <div className="text-[10px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                      {post.format}
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+              {statusPosts.length === 0 && (
+                <div className="h-24 border-2 border-dashed border-slate-100 rounded-xl flex items-center justify-center text-slate-300 text-xs italic">
+                  No posts here
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+interface CalendarViewProps {
+  currentMonth: Date;
+  posts: Post[];
+  handleCreateForDate: (dateStr: string) => Post;
+  handleOpenModal: (post?: Post) => void;
+}
+
+const CalendarView: React.FC<CalendarViewProps> = ({ currentMonth, posts, handleCreateForDate, handleOpenModal }) => {
+  const monthStart = startOfMonth(currentMonth);
+  const monthEnd = endOfMonth(monthStart);
+  const startDate = startOfWeek(monthStart);
+  const endDate = endOfWeek(monthEnd);
+  
+  const calendarDays = eachDayOfInterval({ start: startDate, end: endDate });
+  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+      <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50">
+        {weekDays.map(day => (
+          <div key={day} className="px-2 py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">
+            {day}
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 auto-rows-[120px]">
+        {calendarDays.map((day, idx) => {
+          const dayPosts = posts.filter(p => isSameDay(new Date(p.date), day));
+          const isCurrentMonth = isSameMonth(day, currentMonth);
+          const isToday = isSameDay(day, new Date());
+
+          return (
+            <div 
+              key={idx} 
+              className={`border-r border-b border-slate-100 p-2 flex flex-col gap-1 overflow-hidden transition-colors ${!isCurrentMonth ? 'bg-slate-50/50' : 'bg-white'} ${isToday ? 'bg-indigo-50/30' : ''} group`}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className={`text-xs font-bold ${!isCurrentMonth ? 'text-slate-300' : isToday ? 'text-indigo-600' : 'text-slate-500'} ${isToday ? 'bg-indigo-100 w-6 h-6 flex items-center justify-center rounded-full' : ''}`}>
+                  {format(day, 'd')}
+                </span>
+                {isCurrentMonth && (
+                  <button 
+                    onClick={() => {
+                      const newPost = handleCreateForDate(format(day, 'yyyy-MM-dd'));
+                      handleOpenModal(newPost);
+                    }}
+                    className="p-0.5 hover:bg-slate-100 rounded text-slate-300 hover:text-indigo-600 transition-colors opacity-0 group-hover:opacity-100"
+                  >
+                    <Plus className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-col gap-1 overflow-y-auto no-scrollbar">
+                {dayPosts.map(post => (
+                  <div 
+                    key={post.id}
+                    onClick={() => handleOpenModal(post)}
+                    className={`text-[10px] px-1.5 py-0.5 rounded truncate cursor-pointer font-medium border ${STATUS_COLORS[post.status]} hover:brightness-95 transition-all`}
+                    title={post.topicTheme}
+                  >
+                    {post.contentTitle}: {post.topicTheme || "Untitled"}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+interface MonthlyTableViewProps {
+  currentMonth: Date;
+  tableColumns: TableColumn[];
+  posts: Post[];
+  handleUpdatePostInline: (id: string, field: keyof Post, value: any) => void;
+  handleCreateForDate: (dateStr: string) => Post;
+  showColumnSettings: boolean;
+  setShowColumnSettings: (show: boolean) => void;
+  setTableColumns: Dispatch<SetStateAction<TableColumn[]>>;
+  toggleColumnVisibility: (id: ColumnId) => void;
+  addCustomColumn: () => void;
+  sensors: any;
+  handleDragEnd: (event: DragEndEvent) => void;
+  isColumnsLocked: boolean;
+  setIsColumnsLocked: (locked: boolean) => void;
+  handleCopy: (text: string, id: string) => void;
+  copiedId: string | null;
+  setPreviewImage: (url: string | null) => void;
+  handleOpenModal: (post?: Post) => void;
+  handleDeletePost: (id: string) => void;
+}
+
+const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
+  currentMonth,
+  tableColumns,
+  posts,
+  handleUpdatePostInline,
+  handleCreateForDate,
+  showColumnSettings,
+  setShowColumnSettings,
+  setTableColumns,
+  toggleColumnVisibility,
+  addCustomColumn,
+  sensors,
+  handleDragEnd,
+  isColumnsLocked,
+  setIsColumnsLocked,
+  handleCopy,
+  copiedId,
+  setPreviewImage,
+  handleOpenModal,
+  handleDeletePost
+}) => {
+  const monthStart = startOfMonth(currentMonth);
+  const monthEnd = endOfMonth(monthStart);
+  const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  const visibleColumns = tableColumns.filter(c => c.visible);
+
+  const renderCell = (post: Post, colId: ColumnId, day: Date, pIdx: number) => {
+    const isToday = isSameDay(day, new Date());
+    
+    switch (colId) {
+      case 'date':
+        return pIdx === 0 ? (
+          <div className={`text-xs font-bold ${isToday ? 'text-indigo-600' : 'text-slate-700'}`}>
+            {format(day, 'EEE, MMM d')}
+          </div>
+        ) : null;
+      case 'contentTitle':
+        return (
+          <select 
+            value={post.contentTitle}
+            onChange={(e) => handleUpdatePostInline(post.id, 'contentTitle', e.target.value)}
+            className="w-full bg-transparent border-none text-sm font-medium text-slate-900 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none appearance-none cursor-pointer hover:bg-slate-100"
+          >
+            {CONTENT_TITLES.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        );
+      case 'contentType':
+        return (
+          <select 
+            value={post.contentType}
+            onChange={(e) => handleUpdatePostInline(post.id, 'contentType', e.target.value)}
+            className="w-full bg-transparent border-none text-xs text-slate-600 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none appearance-none cursor-pointer hover:bg-slate-100"
+          >
+            {CONTENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        );
+      case 'topicTheme':
+        return (
+          <input 
+            type="text"
+            value={post.topicTheme}
+            placeholder="Enter theme..."
+            onChange={(e) => handleUpdatePostInline(post.id, 'topicTheme', e.target.value)}
+            className="w-full bg-transparent border-none text-sm text-slate-700 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none hover:bg-slate-100"
+          />
+        );
+      case 'subtopic':
+        return (
+          <input 
+            type="text"
+            value={post.subtopic || ''}
+            placeholder="Enter subtopic..."
+            onChange={(e) => handleUpdatePostInline(post.id, 'subtopic', e.target.value)}
+            className="w-full bg-transparent border-none text-sm text-slate-700 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none hover:bg-slate-100"
+          />
+        );
+      case 'caption':
+        return (
+          <div className="relative group/caption">
+            <textarea 
+              value={post.caption || ''}
+              placeholder="No caption..."
+              onChange={(e) => handleUpdatePostInline(post.id, 'caption', e.target.value)}
+              rows={1}
+              className="w-full bg-transparent border-none text-xs text-slate-600 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none hover:bg-slate-100 resize-none min-h-[32px] overflow-hidden line-clamp-2 focus:line-clamp-none focus:min-h-[80px]"
+            />
+            {post.caption && (
+              <button 
+                onClick={() => handleCopy(post.caption!, post.id)}
+                className="absolute top-1 right-1 p-1 bg-white/80 border border-slate-200 rounded shadow-sm opacity-0 group-hover/caption:opacity-100 transition-opacity hover:bg-indigo-50 hover:text-indigo-600"
+                title="Copy Caption"
+              >
+                {copiedId === post.id ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+              </button>
+            )}
+          </div>
+        );
+      case 'creatives':
+        return post.creatives?.[0] ? (
+          <div className="relative group/creative w-12 h-12 rounded border border-slate-200 overflow-hidden bg-slate-50">
+            <img 
+              src={post.creatives[0]} 
+              alt="Creative" 
+              className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+            />
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/creative:opacity-100 transition-opacity flex items-center justify-center gap-1">
+              <button 
+                onClick={() => setPreviewImage(post.creatives![0])}
+                className="p-1 text-white hover:text-indigo-300 transition-colors"
+              >
+                <Eye className="w-3 h-3" />
+              </button>
+              <button 
+                onClick={() => handleOpenModal(post)}
+                className="p-1 text-white hover:text-indigo-300 transition-colors"
+              >
+                <Upload className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button 
+            onClick={() => handleOpenModal(post)}
+            className="w-12 h-12 rounded border-2 border-dashed border-slate-200 flex items-center justify-center text-slate-400 hover:border-indigo-300 hover:text-indigo-500 hover:bg-indigo-50 transition-all"
+          >
+            <Upload className="w-4 h-4" />
+          </button>
+        );
+      case 'format':
+        return (
+          <select 
+            value={post.format}
+            onChange={(e) => handleUpdatePostInline(post.id, 'format', e.target.value)}
+            className="w-full bg-transparent border-none text-xs text-slate-600 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none appearance-none cursor-pointer hover:bg-slate-100"
+          >
+            {FORMATS.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        );
+      case 'status':
+        return (
+          <select 
+            value={post.status}
+            onChange={(e) => handleUpdatePostInline(post.id, 'status', e.target.value as PostStatus)}
+            className={`w-full bg-transparent border-none text-[10px] font-bold uppercase tracking-wider focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none appearance-none cursor-pointer hover:bg-slate-100 ${STATUS_COLORS[post.status]}`}
+          >
+            <option value="Not Started">Not Started</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Ready for Review">Ready for Review</option>
+            <option value="Scheduled">Scheduled</option>
+          </select>
+        );
+      case 'funnelStatus':
+        return (
+          <select 
+            value={post.funnelStatus}
+            onChange={(e) => handleUpdatePostInline(post.id, 'funnelStatus', e.target.value)}
+            className="w-full bg-transparent border-none text-xs text-slate-600 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none appearance-none cursor-pointer hover:bg-slate-100"
+          >
+            {FUNNEL_STATUSES.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        );
+      case 'visualIdeas':
+        return (
+          <input 
+            type="text"
+            value={post.visualIdeas || ''}
+            placeholder="Visual ideas..."
+            onChange={(e) => handleUpdatePostInline(post.id, 'visualIdeas', e.target.value)}
+            className="w-full bg-transparent border-none text-sm text-slate-700 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none hover:bg-slate-100"
+          />
+        );
+      case 'ai':
+        return (
+          <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button 
+              onClick={() => handleOpenModal(post)}
+              className="p-1.5 hover:bg-indigo-50 text-indigo-600 rounded-md transition-colors"
+            >
+              <Sparkles className="w-4 h-4" />
+            </button>
+            <button 
+              onClick={() => handleDeletePost(post.id)}
+              className="p-1.5 hover:bg-rose-50 text-rose-600 rounded-md transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        );
+      default:
+        if (colId.toString().startsWith('custom_') || colId.toString() === 'notes') {
+          return (
+            <input 
+              type="text"
+              value={(post as any)[colId] || ''}
+              placeholder={`Enter ${colId.toString() === 'notes' ? 'notes' : 'text'}...`}
+              onChange={(e) => handleUpdatePostInline(post.id, colId as any, e.target.value)}
+              className="w-full bg-transparent border-none text-sm text-slate-700 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none hover:bg-slate-100"
+            />
+          );
+        }
+        return null;
+    }
+  };
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+      <div className="p-3 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <LayoutList className="w-4 h-4 text-slate-400" />
+          <span className="text-sm font-semibold text-slate-700">Monthly Table</span>
+        </div>
+        <div className="relative">
+          <button 
+            onClick={() => setShowColumnSettings(!showColumnSettings)}
+            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"
+          >
+            <Columns className="w-3.5 h-3.5" />
+            Columns
+          </button>
+          
+          <AnimatePresence>
+            {showColumnSettings && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-200 z-50 p-2"
+              >
+                <div className="flex items-center justify-between p-2 mb-2 border-b border-slate-100">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Manage Columns</span>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => setTableColumns([
+                        { id: 'date', label: 'Date', width: 'w-32', visible: true },
+                        { id: 'contentTitle', label: 'Content Title', width: 'w-40', visible: true },
+                        { id: 'contentType', label: 'Type', width: 'w-40', visible: true },
+                        { id: 'topicTheme', label: 'Topic / Theme', width: 'w-64', visible: true },
+                        { id: 'subtopic', label: 'Subtopic', width: 'w-48', visible: false },
+                        { id: 'caption', label: 'Caption', width: 'w-64', visible: true },
+                        { id: 'creatives', label: 'Creatives', width: 'w-32', visible: true },
+                        { id: 'format', label: 'Format', width: 'w-40', visible: true },
+                        { id: 'status', label: 'Status', width: 'w-44', visible: true },
+                        { id: 'funnelStatus', label: 'Funnel', width: 'w-40', visible: false },
+                        { id: 'visualIdeas', label: 'Visual Ideas', width: 'w-64', visible: false },
+                        { id: 'notes', label: 'Notes', width: 'w-64', visible: false },
+                        { id: 'ai', label: 'AI', width: 'w-24', visible: true },
+                      ])}
+                      className="text-[10px] font-bold text-indigo-600 hover:underline"
+                    >
+                      Reset
+                    </button>
+                    <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => setIsColumnsLocked(!isColumnsLocked)}
+                      className={`p-1 rounded transition-colors ${isColumnsLocked ? 'text-amber-500 hover:bg-amber-50' : 'text-slate-400 hover:bg-slate-100'}`}
+                      title={isColumnsLocked ? "Unlock Column Order" : "Lock Column Order"}
+                    >
+                      {isColumnsLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+                    </button>
+                    <button onClick={() => setShowColumnSettings(false)}><X className="w-3.5 h-3.5 text-slate-400" /></button>
+                  </div>
+                  </div>
+                </div>
+                <div className="space-y-1 max-h-80 overflow-y-auto no-scrollbar">
+                  <DndContext 
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <SortableContext 
+                      items={tableColumns.map(c => c.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {tableColumns.map((col) => (
+                        <SortableColumnItem 
+                          key={col.id.toString()} 
+                          col={col} 
+                          toggleColumnVisibility={toggleColumnVisibility}
+                          setTableColumns={setTableColumns}
+                          isLocked={isColumnsLocked}
+                        />
+                      ))}
+                    </SortableContext>
+                  </DndContext>
+                </div>
+                <button 
+                  onClick={addCustomColumn}
+                  className="w-full mt-2 flex items-center justify-center gap-2 p-2 text-xs font-bold text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors border border-dashed border-indigo-200"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Add New Column
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      <DndContext 
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse table-fixed">
+            <thead>
+              <SortableContext 
+                items={visibleColumns.map(c => c.id)}
+                strategy={horizontalListSortingStrategy}
+              >
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  {visibleColumns.map((col) => (
+                    <SortableHeader key={col.id.toString()} col={col} isLocked={isColumnsLocked} />
+                  ))}
+                </tr>
+              </SortableContext>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {days.map((day) => {
+                const dateStr = format(day, 'yyyy-MM-dd');
+                const dayPosts = posts.filter(p => p.date === dateStr);
+                const isToday = isSameDay(day, new Date());
+
+                if (dayPosts.length === 0) {
+                  return (
+                    <tr key={dateStr} className={`group hover:bg-slate-50/50 transition-colors ${isToday ? 'bg-indigo-50/20' : ''}`}>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className={`text-xs font-medium ${isToday ? 'text-indigo-600' : 'text-slate-400'}`}>
+                          {format(day, 'EEE, MMM d')}
+                        </div>
+                      </td>
+                      <td colSpan={visibleColumns.length - 1} className="px-4 py-3">
+                        <button 
+                          onClick={() => handleCreateForDate(dateStr)}
+                          className="w-full text-left text-xs text-slate-300 italic hover:text-indigo-400 transition-colors py-1"
+                        >
+                          + Click to add content...
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                }
+
+                return dayPosts.map((post, pIdx) => (
+                  <tr key={post.id} className={`group hover:bg-slate-50/50 transition-colors ${isToday ? 'bg-indigo-50/20' : ''}`}>
+                    {visibleColumns.map((col) => (
+                      <td key={col.id} className="px-2 py-2 align-top">
+                        {renderCell(post, col.id, day, pIdx)}
+                      </td>
+                    ))}
+                  </tr>
+                ));
+              })}
+            </tbody>
+          </table>
+        </div>
+      </DndContext>
+    </div>
+  );
+};
+
 export default function App() {
   const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS);
   const [searchQuery, setSearchQuery] = useState('');
@@ -347,491 +887,6 @@ export default function App() {
     }
   };
 
-  const KanbanView = () => {
-    const statuses: PostStatus[] = ['Not Started', 'In Progress', 'Ready for Review', 'Scheduled'];
-    
-    return (
-      <div className="flex gap-6 overflow-x-auto pb-6 min-h-[600px]">
-        {statuses.map(status => {
-          const statusPosts = filteredPosts.filter(p => p.status === status);
-          const StatusIcon = STATUS_ICONS[status];
-          
-          return (
-            <div key={status} className="flex-shrink-0 w-80 flex flex-col gap-4">
-              <div className="flex items-center justify-between px-2">
-                <div className="flex items-center gap-2">
-                  <span className={`p-1 rounded-md border ${STATUS_COLORS[status]}`}>
-                    <StatusIcon className="w-4 h-4" />
-                  </span>
-                  <h3 className="font-semibold text-slate-700">{status}</h3>
-                  <span className="text-xs font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
-                    {statusPosts.length}
-                  </span>
-                </div>
-                <button 
-                  onClick={() => {
-                    setFormData(prev => ({ ...prev, status }));
-                    handleOpenModal();
-                  }}
-                  className="p-1 hover:bg-slate-200 rounded-md text-slate-400 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
-              
-              <div className="flex flex-col gap-3">
-                {statusPosts.map(post => (
-                  <motion.div 
-                    layout
-                    key={post.id}
-                    onClick={() => handleOpenModal(post)}
-                    className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer group"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50 px-2 py-0.5 rounded">
-                        {post.contentTitle}
-                      </span>
-                      <div className="text-[10px] text-slate-400 font-medium">
-                        {format(new Date(post.date), 'MMM d')}
-                      </div>
-                    </div>
-                    <h4 className="text-sm font-semibold text-slate-800 mb-2 line-clamp-2">
-                      {post.topicTheme || "Untitled Content"}
-                    </h4>
-                    <div className="flex items-center justify-between">
-                      <div className="flex -space-x-1.5">
-                        {post.creatives?.slice(0, 3).map((c, i) => (
-                          <div key={i} className="h-6 w-6 rounded-full border-2 border-white overflow-hidden bg-slate-100">
-                            <img src={c} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
-                          </div>
-                        ))}
-                      </div>
-                      <div className="text-[10px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
-                        {post.format}
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-                {statusPosts.length === 0 && (
-                  <div className="h-24 border-2 border-dashed border-slate-100 rounded-xl flex items-center justify-center text-slate-300 text-xs italic">
-                    No posts here
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
-
-  const CalendarView = () => {
-    const monthStart = startOfMonth(currentMonth);
-    const monthEnd = endOfMonth(monthStart);
-    const startDate = startOfWeek(monthStart);
-    const endDate = endOfWeek(monthEnd);
-    
-    const calendarDays = eachDayOfInterval({ start: startDate, end: endDate });
-    const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-    return (
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-        <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50">
-          {weekDays.map(day => (
-            <div key={day} className="px-2 py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">
-              {day}
-            </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-7 auto-rows-[120px]">
-          {calendarDays.map((day, idx) => {
-            const dayPosts = posts.filter(p => isSameDay(new Date(p.date), day));
-            const isCurrentMonth = isSameMonth(day, currentMonth);
-            const isToday = isSameDay(day, new Date());
-
-            return (
-              <div 
-                key={idx} 
-                className={`border-r border-b border-slate-100 p-2 flex flex-col gap-1 overflow-hidden transition-colors ${!isCurrentMonth ? 'bg-slate-50/50' : 'bg-white'} ${isToday ? 'bg-indigo-50/30' : ''} group`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className={`text-xs font-bold ${!isCurrentMonth ? 'text-slate-300' : isToday ? 'text-indigo-600' : 'text-slate-500'} ${isToday ? 'bg-indigo-100 w-6 h-6 flex items-center justify-center rounded-full' : ''}`}>
-                    {format(day, 'd')}
-                  </span>
-                  {isCurrentMonth && (
-                    <button 
-                      onClick={() => {
-                        const newPost = handleCreateForDate(format(day, 'yyyy-MM-dd'));
-                        handleOpenModal(newPost);
-                      }}
-                      className="p-0.5 hover:bg-slate-100 rounded text-slate-300 hover:text-indigo-600 transition-colors opacity-0 group-hover:opacity-100"
-                    >
-                      <Plus className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
-                <div className="flex flex-col gap-1 overflow-y-auto no-scrollbar">
-                  {dayPosts.map(post => (
-                    <div 
-                      key={post.id}
-                      onClick={() => handleOpenModal(post)}
-                      className={`text-[10px] px-1.5 py-0.5 rounded truncate cursor-pointer font-medium border ${STATUS_COLORS[post.status]} hover:brightness-95 transition-all`}
-                      title={post.topicTheme}
-                    >
-                      {post.contentTitle}: {post.topicTheme || "Untitled"}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
-
-  const MonthlyTableView = () => {
-    const monthStart = startOfMonth(currentMonth);
-    const monthEnd = endOfMonth(monthStart);
-    const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
-    const visibleColumns = tableColumns.filter(c => c.visible);
-
-    const renderCell = (post: Post, colId: ColumnId, day: Date, pIdx: number) => {
-      const isToday = isSameDay(day, new Date());
-      
-      switch (colId) {
-        case 'date':
-          return pIdx === 0 ? (
-            <div className={`text-xs font-bold ${isToday ? 'text-indigo-600' : 'text-slate-700'}`}>
-              {format(day, 'EEE, MMM d')}
-            </div>
-          ) : null;
-        case 'contentTitle':
-          return (
-            <select 
-              value={post.contentTitle}
-              onChange={(e) => handleUpdatePostInline(post.id, 'contentTitle', e.target.value)}
-              className="w-full bg-transparent border-none text-sm font-medium text-slate-900 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none appearance-none cursor-pointer hover:bg-slate-100"
-            >
-              {CONTENT_TITLES.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-          );
-        case 'contentType':
-          return (
-            <select 
-              value={post.contentType}
-              onChange={(e) => handleUpdatePostInline(post.id, 'contentType', e.target.value)}
-              className="w-full bg-transparent border-none text-xs text-slate-600 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none appearance-none cursor-pointer hover:bg-slate-100"
-            >
-              {CONTENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-          );
-        case 'topicTheme':
-          return (
-            <input 
-              type="text"
-              value={post.topicTheme}
-              placeholder="Enter theme..."
-              onChange={(e) => handleUpdatePostInline(post.id, 'topicTheme', e.target.value)}
-              className="w-full bg-transparent border-none text-sm text-slate-700 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none hover:bg-slate-100"
-            />
-          );
-        case 'subtopic':
-          return (
-            <input 
-              type="text"
-              value={post.subtopic || ''}
-              placeholder="Enter subtopic..."
-              onChange={(e) => handleUpdatePostInline(post.id, 'subtopic', e.target.value)}
-              className="w-full bg-transparent border-none text-sm text-slate-700 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none hover:bg-slate-100"
-            />
-          );
-        case 'caption':
-          return (
-            <div className="relative group/caption">
-              <textarea 
-                value={post.caption || ''}
-                placeholder="No caption..."
-                onChange={(e) => handleUpdatePostInline(post.id, 'caption', e.target.value)}
-                rows={1}
-                className="w-full bg-transparent border-none text-xs text-slate-600 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none hover:bg-slate-100 resize-none min-h-[32px] overflow-hidden line-clamp-2 focus:line-clamp-none focus:min-h-[80px]"
-              />
-              {post.caption && (
-                <button 
-                  onClick={() => handleCopy(post.caption!, post.id)}
-                  className="absolute top-1 right-1 p-1 bg-white/80 border border-slate-200 rounded shadow-sm opacity-0 group-hover/caption:opacity-100 transition-opacity hover:bg-indigo-50 hover:text-indigo-600"
-                  title="Copy Caption"
-                >
-                  {copiedId === post.id ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
-                </button>
-              )}
-            </div>
-          );
-        case 'creatives':
-          return post.creatives?.[0] ? (
-            <div className="relative group/creative w-12 h-12 rounded border border-slate-200 overflow-hidden bg-slate-50">
-              <img 
-                src={post.creatives[0]} 
-                alt="Creative" 
-                className="w-full h-full object-cover"
-                referrerPolicy="no-referrer"
-              />
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/creative:opacity-100 transition-opacity flex items-center justify-center gap-1">
-                <button 
-                  onClick={() => setPreviewImage(post.creatives![0])}
-                  className="p-1 text-white hover:text-indigo-300 transition-colors"
-                >
-                  <Eye className="w-3 h-3" />
-                </button>
-                <button 
-                  onClick={() => handleOpenModal(post)}
-                  className="p-1 text-white hover:text-indigo-300 transition-colors"
-                >
-                  <Upload className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button 
-              onClick={() => handleOpenModal(post)}
-              className="w-12 h-12 rounded border-2 border-dashed border-slate-200 flex items-center justify-center text-slate-400 hover:border-indigo-300 hover:text-indigo-500 hover:bg-indigo-50 transition-all"
-            >
-              <Upload className="w-4 h-4" />
-            </button>
-          );
-        case 'format':
-          return (
-            <select 
-              value={post.format}
-              onChange={(e) => handleUpdatePostInline(post.id, 'format', e.target.value)}
-              className="w-full bg-transparent border-none text-xs text-slate-600 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none appearance-none cursor-pointer hover:bg-slate-100"
-            >
-              {FORMATS.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-          );
-        case 'status':
-          return (
-            <select 
-              value={post.status}
-              onChange={(e) => handleUpdatePostInline(post.id, 'status', e.target.value as PostStatus)}
-              className={`w-full bg-transparent border-none text-[10px] font-bold uppercase tracking-wider focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none appearance-none cursor-pointer hover:bg-slate-100 ${STATUS_COLORS[post.status]}`}
-            >
-              <option value="Not Started">Not Started</option>
-              <option value="In Progress">In Progress</option>
-              <option value="Ready for Review">Ready for Review</option>
-              <option value="Scheduled">Scheduled</option>
-            </select>
-          );
-        case 'funnelStatus':
-          return (
-            <select 
-              value={post.funnelStatus}
-              onChange={(e) => handleUpdatePostInline(post.id, 'funnelStatus', e.target.value)}
-              className="w-full bg-transparent border-none text-xs text-slate-600 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none appearance-none cursor-pointer hover:bg-slate-100"
-            >
-              {FUNNEL_STATUSES.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-          );
-        case 'visualIdeas':
-          return (
-            <input 
-              type="text"
-              value={post.visualIdeas || ''}
-              placeholder="Visual ideas..."
-              onChange={(e) => handleUpdatePostInline(post.id, 'visualIdeas', e.target.value)}
-              className="w-full bg-transparent border-none text-sm text-slate-700 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none hover:bg-slate-100"
-            />
-          );
-        case 'ai':
-          return (
-            <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button 
-                onClick={() => handleOpenModal(post)}
-                className="p-1.5 hover:bg-indigo-50 text-indigo-600 rounded-md transition-colors"
-              >
-                <Sparkles className="w-4 h-4" />
-              </button>
-              <button 
-                onClick={() => handleDeletePost(post.id)}
-                className="p-1.5 hover:bg-rose-50 text-rose-600 rounded-md transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          );
-        default:
-          if (colId.toString().startsWith('custom_') || colId.toString() === 'notes') {
-            return (
-              <input 
-                type="text"
-                value={(post as any)[colId] || ''}
-                placeholder={`Enter ${colId.toString() === 'notes' ? 'notes' : 'text'}...`}
-                onChange={(e) => handleUpdatePostInline(post.id, colId as any, e.target.value)}
-                className="w-full bg-transparent border-none text-sm text-slate-700 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none hover:bg-slate-100"
-              />
-            );
-          }
-          return null;
-      }
-    };
-
-    return (
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-        <div className="p-3 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <LayoutList className="w-4 h-4 text-slate-400" />
-            <span className="text-sm font-semibold text-slate-700">Monthly Table</span>
-          </div>
-          <div className="relative">
-            <button 
-              onClick={() => setShowColumnSettings(!showColumnSettings)}
-              className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"
-            >
-              <Columns className="w-3.5 h-3.5" />
-              Columns
-            </button>
-            
-            <AnimatePresence>
-              {showColumnSettings && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-200 z-50 p-2"
-                >
-                  <div className="flex items-center justify-between p-2 mb-2 border-b border-slate-100">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Manage Columns</span>
-                    <div className="flex items-center gap-2">
-                      <button 
-                        onClick={() => setTableColumns([
-                          { id: 'date', label: 'Date', width: 'w-32', visible: true },
-                          { id: 'contentTitle', label: 'Content Title', width: 'w-40', visible: true },
-                          { id: 'contentType', label: 'Type', width: 'w-40', visible: true },
-                          { id: 'topicTheme', label: 'Topic / Theme', width: 'w-64', visible: true },
-                          { id: 'subtopic', label: 'Subtopic', width: 'w-48', visible: false },
-                          { id: 'caption', label: 'Caption', width: 'w-64', visible: true },
-                          { id: 'creatives', label: 'Creatives', width: 'w-32', visible: true },
-                          { id: 'format', label: 'Format', width: 'w-40', visible: true },
-                          { id: 'status', label: 'Status', width: 'w-44', visible: true },
-                          { id: 'funnelStatus', label: 'Funnel', width: 'w-40', visible: false },
-                          { id: 'visualIdeas', label: 'Visual Ideas', width: 'w-64', visible: false },
-                          { id: 'notes', label: 'Notes', width: 'w-64', visible: false },
-                          { id: 'ai', label: 'AI', width: 'w-24', visible: true },
-                        ])}
-                        className="text-[10px] font-bold text-indigo-600 hover:underline"
-                      >
-                        Reset
-                      </button>
-                      <div className="flex items-center gap-2">
-                      <button 
-                        onClick={() => setIsColumnsLocked(!isColumnsLocked)}
-                        className={`p-1 rounded transition-colors ${isColumnsLocked ? 'text-amber-500 hover:bg-amber-50' : 'text-slate-400 hover:bg-slate-100'}`}
-                        title={isColumnsLocked ? "Unlock Column Order" : "Lock Column Order"}
-                      >
-                        {isColumnsLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
-                      </button>
-                      <button onClick={() => setShowColumnSettings(false)}><X className="w-3.5 h-3.5 text-slate-400" /></button>
-                    </div>
-                    </div>
-                  </div>
-                  <div className="space-y-1 max-h-80 overflow-y-auto no-scrollbar">
-                    <DndContext 
-                      sensors={sensors}
-                      collisionDetection={closestCenter}
-                      onDragEnd={handleDragEnd}
-                    >
-                      <SortableContext 
-                        items={tableColumns.map(c => c.id)}
-                        strategy={verticalListSortingStrategy}
-                      >
-                        {tableColumns.map((col) => (
-                          <SortableColumnItem 
-                            key={col.id.toString()} 
-                            col={col} 
-                            toggleColumnVisibility={toggleColumnVisibility}
-                            setTableColumns={setTableColumns}
-                            isLocked={isColumnsLocked}
-                          />
-                        ))}
-                      </SortableContext>
-                    </DndContext>
-                  </div>
-                  <button 
-                    onClick={addCustomColumn}
-                    className="w-full mt-2 flex items-center justify-center gap-2 p-2 text-xs font-bold text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors border border-dashed border-indigo-200"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    Add New Column
-                  </button>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-
-        <DndContext 
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse table-fixed">
-              <thead>
-                <SortableContext 
-                  items={visibleColumns.map(c => c.id)}
-                  strategy={horizontalListSortingStrategy}
-                >
-                  <tr className="bg-slate-50 border-b border-slate-200">
-                    {visibleColumns.map((col) => (
-                      <SortableHeader key={col.id.toString()} col={col} isLocked={isColumnsLocked} />
-                    ))}
-                  </tr>
-                </SortableContext>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-              {days.map((day) => {
-                const dateStr = format(day, 'yyyy-MM-dd');
-                const dayPosts = posts.filter(p => p.date === dateStr);
-                const isToday = isSameDay(day, new Date());
-
-                if (dayPosts.length === 0) {
-                  return (
-                    <tr key={dateStr} className={`group hover:bg-slate-50/50 transition-colors ${isToday ? 'bg-indigo-50/20' : ''}`}>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <div className={`text-xs font-medium ${isToday ? 'text-indigo-600' : 'text-slate-400'}`}>
-                          {format(day, 'EEE, MMM d')}
-                        </div>
-                      </td>
-                      <td colSpan={visibleColumns.length - 1} className="px-4 py-3">
-                        <button 
-                          onClick={() => handleCreateForDate(dateStr)}
-                          className="w-full text-left text-xs text-slate-300 italic hover:text-indigo-400 transition-colors py-1"
-                        >
-                          + Click to add content...
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                }
-
-                return dayPosts.map((post, pIdx) => (
-                  <tr key={post.id} className={`group hover:bg-slate-50/50 transition-colors ${isToday ? 'bg-indigo-50/20' : ''}`}>
-                    {visibleColumns.map((col) => (
-                      <td key={col.id} className="px-2 py-2 align-top">
-                        {renderCell(post, col.id, day, pIdx)}
-                      </td>
-                    ))}
-                  </tr>
-                ));
-              })}
-            </tbody>
-          </table>
-        </div>
-      </DndContext>
-    </div>
-  );
-};
-
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
       {/* Header */}
@@ -929,9 +984,44 @@ export default function App() {
 
         {/* View Content */}
         <div className="min-h-[400px]">
-          {viewMode === 'list' && <MonthlyTableView />}
-          {viewMode === 'kanban' && <KanbanView />}
-          {viewMode === 'calendar' && <CalendarView />}
+          {viewMode === 'list' && (
+            <MonthlyTableView 
+              currentMonth={currentMonth}
+              tableColumns={tableColumns}
+              posts={posts}
+              handleUpdatePostInline={handleUpdatePostInline}
+              handleCreateForDate={handleCreateForDate}
+              showColumnSettings={showColumnSettings}
+              setShowColumnSettings={setShowColumnSettings}
+              setTableColumns={setTableColumns}
+              toggleColumnVisibility={toggleColumnVisibility}
+              addCustomColumn={addCustomColumn}
+              sensors={sensors}
+              handleDragEnd={handleDragEnd}
+              isColumnsLocked={isColumnsLocked}
+              setIsColumnsLocked={setIsColumnsLocked}
+              handleCopy={handleCopy}
+              copiedId={copiedId}
+              setPreviewImage={setPreviewImage}
+              handleOpenModal={handleOpenModal}
+              handleDeletePost={handleDeletePost}
+            />
+          )}
+          {viewMode === 'kanban' && (
+            <KanbanView 
+              filteredPosts={filteredPosts}
+              setFormData={setFormData}
+              handleOpenModal={handleOpenModal}
+            />
+          )}
+          {viewMode === 'calendar' && (
+            <CalendarView 
+              currentMonth={currentMonth}
+              posts={posts}
+              handleCreateForDate={handleCreateForDate}
+              handleOpenModal={handleOpenModal}
+            />
+          )}
         </div>
       </main>
 
