@@ -59,6 +59,75 @@ import { CSS } from '@dnd-kit/utilities';
 import { Post, PostStatus, ViewMode, INITIAL_POSTS } from './types';
 import { generateCaption } from './services/geminiService';
 import { CONTENT_TITLES, CONTENT_TYPES, FORMATS, FUNNEL_STATUSES } from './constants';
+import { auth, db, googleProvider } from './firebase';
+import { 
+  onAuthStateChanged, 
+  signInWithPopup, 
+  signOut, 
+  User 
+} from 'firebase/auth';
+import { 
+  collection, 
+  onSnapshot, 
+  query, 
+  where, 
+  doc, 
+  setDoc, 
+  deleteDoc, 
+  updateDoc,
+  getDocFromServer
+} from 'firebase/firestore';
+
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId: string | undefined;
+    email: string | null | undefined;
+    emailVerified: boolean | undefined;
+    isAnonymous: boolean | undefined;
+    tenantId: string | null | undefined;
+    providerInfo: {
+      providerId: string;
+      displayName: string | null;
+      email: string | null;
+      photoUrl: string | null;
+    }[];
+  }
+}
+
+const handleFirestoreError = (error: unknown, operationType: OperationType, path: string | null) => {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData.map(provider => ({
+        providerId: provider.providerId,
+        displayName: provider.displayName,
+        email: provider.email,
+        photoUrl: provider.photoURL
+      })) || []
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+};
 
 type ColumnId = keyof Post | 'ai';
 
@@ -170,7 +239,7 @@ const KanbanView: React.FC<KanbanViewProps> = ({ filteredPosts, setFormData, han
 interface CalendarViewProps {
   currentMonth: Date;
   posts: Post[];
-  handleCreateForDate: (dateStr: string) => Post;
+  handleCreateForDate: (dateStr: string) => Promise<Post | null>;
   handleOpenModal: (post?: Post) => void;
 }
 
@@ -209,9 +278,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentMonth, posts, handle
                 </span>
                 {isCurrentMonth && (
                   <button 
-                    onClick={() => {
-                      const newPost = handleCreateForDate(format(day, 'yyyy-MM-dd'));
-                      handleOpenModal(newPost);
+                    onClick={async () => {
+                      const newPost = await handleCreateForDate(format(day, 'yyyy-MM-dd'));
+                      if (newPost) handleOpenModal(newPost);
                     }}
                     className="p-0.5 hover:bg-slate-100 rounded text-slate-300 hover:text-indigo-600 transition-colors opacity-0 group-hover:opacity-100"
                   >
@@ -244,7 +313,7 @@ interface MonthlyTableViewProps {
   tableColumns: TableColumn[];
   posts: Post[];
   handleUpdatePostInline: (id: string, field: keyof Post, value: any) => void;
-  handleCreateForDate: (dateStr: string) => Post;
+  handleCreateForDate: (dateStr: string) => Promise<Post | null>;
   showColumnSettings: boolean;
   setShowColumnSettings: (show: boolean) => void;
   setTableColumns: Dispatch<SetStateAction<TableColumn[]>>;
@@ -624,7 +693,10 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
 };
 
 export default function App() {
-  const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthReady, setIsAuthReady] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<PostStatus | 'All'>('All');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -672,6 +744,52 @@ export default function App() {
   // Undo/Redo state for caption
   const [captionHistory, setCaptionHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
+  const [error, setError] = useState<string | null>(null);
+
+  // Auth Listener
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setIsAuthReady(true);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Firestore Data Fetching
+  useEffect(() => {
+    if (!isAuthReady) return;
+
+    // Test connection
+    const testConnection = async () => {
+      try {
+        await getDocFromServer(doc(db, 'test', 'connection'));
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('the client is offline')) {
+          console.error("Please check your Firebase configuration.");
+        }
+      }
+    };
+    testConnection();
+
+    // If no user, we show all posts or guest posts. 
+    // For "disable login", we'll just fetch all posts for now or use a 'guest' filter.
+    const postsRef = collection(db, 'posts');
+    const q = user 
+      ? query(postsRef, where('userId', '==', user.uid))
+      : query(postsRef, where('userId', '==', 'guest_user'));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const postsData = snapshot.docs.map(doc => ({
+        ...doc.data(),
+        id: doc.id
+      })) as Post[];
+      setPosts(postsData);
+    }, (err) => {
+      handleFirestoreError(err, OperationType.LIST, 'posts');
+    });
+
+    return () => unsubscribe();
+  }, [isAuthReady, user]);
 
   const filteredPosts = posts.filter(post => {
     const postDate = new Date(post.date);
@@ -687,13 +805,19 @@ export default function App() {
     return matchesMonth && matchesSearch && matchesStatus;
   });
 
-  const handleUpdatePostInline = (id: string, field: keyof Post, value: any) => {
-    setPosts(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
+  const handleUpdatePostInline = async (id: string, field: keyof Post, value: any) => {
+    try {
+      const postRef = doc(db, 'posts', id);
+      await updateDoc(postRef, { [field]: value });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, `posts/${id}`);
+    }
   };
 
-  const handleCreateForDate = (dateStr: string) => {
+  const handleCreateForDate = async (dateStr: string) => {
+    const id = Math.random().toString(36).substr(2, 9);
     const newPost: Post = {
-      id: Math.random().toString(36).substr(2, 9),
+      id,
       date: dateStr,
       status: 'Not Started',
       contentTitle: CONTENT_TITLES[0],
@@ -705,9 +829,16 @@ export default function App() {
       caption: '',
       customPrompt: '',
       creatives: [],
+      userId: user?.uid || 'guest_user',
     };
-    setPosts(prev => [...prev, newPost]);
-    return newPost;
+    
+    try {
+      await setDoc(doc(db, 'posts', id), newPost);
+      return newPost;
+    } catch (err) {
+      handleFirestoreError(err, OperationType.CREATE, `posts/${id}`);
+      return null;
+    }
   };
 
   const handlePrevMonth = () => setCurrentMonth(prev => subMonths(prev, 1));
@@ -792,25 +923,32 @@ export default function App() {
     setIsModalOpen(true);
   };
 
-  const handleSavePost = () => {
+  const handleSavePost = async () => {
     if (!formData.contentTitle || !formData.date) return;
 
-    if (editingPost) {
-      setPosts(posts.map(p => p.id === editingPost.id ? { ...p, ...formData } as Post : p));
-    } else {
-      const newPost: Post = {
-        ...formData,
-        id: Math.random().toString(36).substr(2, 9),
-      } as Post;
-      setPosts([newPost, ...posts]);
+    const id = editingPost ? editingPost.id : Math.random().toString(36).substr(2, 9);
+    const postData = {
+      ...formData,
+      id,
+      userId: user?.uid || 'guest_user',
+    } as Post;
+
+    try {
+      await setDoc(doc(db, 'posts', id), postData);
+      setIsModalOpen(false);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, `posts/${id}`);
     }
-    setIsModalOpen(false);
   };
 
-  const handleDeletePost = (id: string) => {
-    setPosts(posts.filter(p => p.id !== id));
-    if (editingPost?.id === id) {
-      setIsModalOpen(false);
+  const handleDeletePost = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'posts', id));
+      if (editingPost?.id === id) {
+        setIsModalOpen(false);
+      }
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, `posts/${id}`);
     }
   };
 
@@ -887,6 +1025,48 @@ export default function App() {
     }
   };
 
+  const handleLogin = async () => {
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (err) {
+      console.error("Login failed", err);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (err) {
+      console.error("Logout failed", err);
+    }
+  };
+
+  const handleRestoreOldData = async () => {
+    if (isSeeding) return;
+    setIsSeeding(true);
+    try {
+      const targetUserId = user?.uid || 'guest_user';
+      const batchPromises = INITIAL_POSTS.map(post => {
+        const postData = { ...post, userId: targetUserId };
+        return setDoc(doc(db, 'posts', post.id), postData);
+      });
+      await Promise.all(batchPromises);
+      alert('Old data restored and saved to database!');
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'posts/batch');
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
+  if (!isAuthReady) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
       {/* Header */}
@@ -897,6 +1077,46 @@ export default function App() {
             <p className="text-sm text-slate-500">Plan, track, and generate AI-powered social media content</p>
           </div>
           <div className="flex items-center gap-3">
+            {user ? (
+              <div className="flex items-center gap-3 mr-4 border-r border-slate-200 pr-4">
+                <div className="flex items-center gap-2">
+                  {user.photoURL && (
+                    <img src={user.photoURL} className="w-8 h-8 rounded-full border border-slate-200" alt="Profile" referrerPolicy="no-referrer" />
+                  )}
+                  <div className="hidden sm:block">
+                    <p className="text-xs font-bold text-slate-900 leading-none">{user.displayName}</p>
+                    <p className="text-[10px] text-slate-500">{user.email}</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={handleLogout}
+                  className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-all"
+                  title="Sign Out"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 mr-4 border-r border-slate-200 pr-4">
+                <button 
+                  onClick={handleLogin}
+                  className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all border border-indigo-200"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  Sign In
+                </button>
+              </div>
+            )}
+            
+            <button 
+              onClick={handleRestoreOldData}
+              disabled={isSeeding}
+              className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-amber-600 hover:bg-amber-50 rounded-lg transition-all border border-amber-200 disabled:opacity-50"
+            >
+              <Undo2 className="w-3.5 h-3.5" />
+              {isSeeding ? 'Restoring...' : 'Restore Old Data'}
+            </button>
+
             <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200">
               <button 
                 onClick={() => setViewMode('list')}
