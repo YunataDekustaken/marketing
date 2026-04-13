@@ -46,6 +46,16 @@
         "userId": { "type": "string" }
       },
       "required": ["id", "title", "message", "createdAt", "read", "userId"]
+    },
+    "SocialLinks": {
+      "title": "SocialLinks",
+      "description": "Social media redirection links",
+      "type": "object",
+      "properties": {
+        "facebook": { "type": "string" },
+        "instagram": { "type": "string" },
+        "linkedin": { "type": "string" }
+      }
     }
   },
   "firestore": {
@@ -56,6 +66,10 @@
     "/notifications/{notificationId}": {
       "schema": "Notification",
       "description": "Collection of user notifications"
+    },
+    "/settings/{settingId}": {
+      "schema": "object",
+      "description": "System settings"
     }
   }
 }

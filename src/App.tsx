@@ -45,7 +45,10 @@ import {
   Download,
   Info,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  Facebook,
+  Instagram,
+  Linkedin
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format, formatDistanceToNow, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from 'date-fns';
@@ -745,13 +748,33 @@ const AdminView = ({
   onRestore, 
   isSeeding, 
   settings, 
-  onToggleSetting 
+  onToggleSetting,
+  socialLinks,
+  onUpdateSocialLinks
 }: { 
   onRestore: () => void, 
   isSeeding: boolean,
   settings: any,
-  onToggleSetting: (key: string) => void
+  onToggleSetting: (key: string) => void,
+  socialLinks: { facebook: string, instagram: string, linkedin: string },
+  onUpdateSocialLinks: (links: any) => void
 }) => {
+  const [localLinks, setLocalLinks] = useState(socialLinks);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  useEffect(() => {
+    setLocalLinks(socialLinks);
+  }, [socialLinks]);
+
+  const handleSaveLinks = () => {
+    setShowConfirm(true);
+  };
+
+  const confirmSave = () => {
+    onUpdateSocialLinks(localLinks);
+    setShowConfirm(false);
+  };
+
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200">
@@ -854,6 +877,64 @@ const AdminView = ({
       </div>
 
       <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200">
+        <div className="flex items-center gap-4 mb-8">
+          <div className="p-3 bg-indigo-50 rounded-xl">
+            <ExternalLink className="w-6 h-6 text-indigo-500" />
+          </div>
+          <h3 className="text-xl font-bold text-slate-900">Social Media Redirection Links</h3>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <Facebook className="w-3 h-3 text-[#1877F2]" />
+              Facebook URL
+            </label>
+            <input 
+              type="url" 
+              placeholder="https://facebook.com/yourpage"
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all text-sm"
+              value={localLinks.facebook}
+              onChange={(e) => setLocalLinks(prev => ({ ...prev, facebook: e.target.value }))}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <Instagram className="w-3 h-3 text-[#E4405F]" />
+              Instagram URL
+            </label>
+            <input 
+              type="url" 
+              placeholder="https://instagram.com/yourprofile"
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all text-sm"
+              value={localLinks.instagram}
+              onChange={(e) => setLocalLinks(prev => ({ ...prev, instagram: e.target.value }))}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <Linkedin className="w-3 h-3 text-[#0A66C2]" />
+              LinkedIn URL
+            </label>
+            <input 
+              type="url" 
+              placeholder="https://linkedin.com/company/yourcompany"
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all text-sm"
+              value={localLinks.linkedin}
+              onChange={(e) => setLocalLinks(prev => ({ ...prev, linkedin: e.target.value }))}
+            />
+          </div>
+        </div>
+
+        <button 
+          onClick={handleSaveLinks}
+          className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition-all shadow-sm"
+        >
+          Save Social Links
+        </button>
+      </div>
+
+      <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200">
         <div className="flex items-center gap-4 mb-6">
           <div className="p-3 bg-rose-50 rounded-xl">
             <AlertCircle className="w-6 h-6 text-rose-500" />
@@ -899,6 +980,49 @@ const AdminView = ({
           </div>
         </div>
       </div>
+
+      {/* Save Confirmation Modal */}
+      <AnimatePresence>
+        {showConfirm && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden"
+            >
+              <div className="p-6">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="p-3 bg-amber-50 rounded-xl">
+                    <AlertCircle className="w-6 h-6 text-amber-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900">Confirm Changes</h3>
+                    <p className="text-sm text-slate-500">Are you sure you want to update the social media redirection links?</p>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-400 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                  These links will be updated immediately for all users across the platform.
+                </p>
+              </div>
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+                <button 
+                  onClick={() => setShowConfirm(false)}
+                  className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={confirmSave}
+                  className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-lg transition-colors shadow-sm"
+                >
+                  Confirm & Save
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
@@ -960,6 +1084,11 @@ export default function App() {
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [socialLinks, setSocialLinks] = useState({
+    facebook: '',
+    instagram: '',
+    linkedin: ''
+  });
 
   const [notifSettings, setNotifSettings] = useState({
     onExportCSV: true,
@@ -1052,6 +1181,15 @@ export default function App() {
     }
   };
 
+  const handleClearNotification = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    try {
+      await deleteDoc(doc(db, 'notifications', id));
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, `notifications/${id}`);
+    }
+  };
+
   const notificationRef = useRef<HTMLDivElement>(null);
   const columnSettingsRef = useRef<HTMLDivElement>(null);
 
@@ -1106,6 +1244,30 @@ export default function App() {
 
     return () => unsubscribe();
   }, [isAuthReady, user]);
+
+  // Social Links Listener
+  useEffect(() => {
+    if (!isAuthReady) return;
+    
+    const unsubscribe = onSnapshot(doc(db, 'settings', 'social_links'), (snapshot) => {
+      if (snapshot.exists()) {
+        setSocialLinks(snapshot.data() as any);
+      }
+    }, (err) => {
+      handleFirestoreError(err, OperationType.GET, 'settings/social_links');
+    });
+
+    return () => unsubscribe();
+  }, [isAuthReady]);
+
+  const handleUpdateSocialLinks = async (links: typeof socialLinks) => {
+    try {
+      await setDoc(doc(db, 'settings', 'social_links'), links);
+      addNotification('onNewTask', 'Settings Updated', 'Social media redirection links have been updated.');
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'settings/social_links');
+    }
+  };
 
   // Firestore Data Fetching
   useEffect(() => {
@@ -1664,7 +1826,16 @@ export default function App() {
                               {!n.read && <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500" />}
                               <div className="flex justify-between items-start mb-1">
                                 <h4 className={`text-xs font-bold ${n.read ? 'text-slate-700' : 'text-slate-900'}`}>{n.title}</h4>
-                                <span className="text-[9px] text-slate-400 font-medium">{n.time}</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[9px] text-slate-400 font-medium">{n.time}</span>
+                                  <button 
+                                    onClick={(e) => handleClearNotification(e, n.id)}
+                                    className="p-1 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded transition-all"
+                                    title="Clear notification"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
                               </div>
                               <p className="text-[11px] text-slate-500 leading-relaxed">{n.message}</p>
                             </div>
@@ -1734,6 +1905,8 @@ export default function App() {
                 isSeeding={isSeeding} 
                 settings={notifSettings}
                 onToggleSetting={(key) => setNotifSettings(prev => ({ ...prev, [key]: !prev[key as keyof typeof notifSettings] }))}
+                socialLinks={socialLinks}
+                onUpdateSocialLinks={handleUpdateSocialLinks}
               />
             ) : (
               <>
@@ -2087,6 +2260,49 @@ export default function App() {
                   />
                   <div className="text-[10px] text-slate-400 text-right">
                     History: {historyIndex + 1} / {captionHistory.length}
+                  </div>
+                </div>
+
+                {/* Social Media Redirection */}
+                <div className="space-y-3 pt-4 border-t border-slate-100">
+                  <label className="text-xs font-medium text-slate-500 uppercase">Publish & Preview</label>
+                  <div className="flex flex-wrap gap-3">
+                    {socialLinks.facebook && (
+                      <a 
+                        href={socialLinks.facebook} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-4 py-2 bg-[#1877F2]/10 text-[#1877F2] hover:bg-[#1877F2] hover:text-white rounded-xl text-xs font-bold transition-all border border-[#1877F2]/20"
+                      >
+                        <Facebook className="w-4 h-4" />
+                        Facebook
+                      </a>
+                    )}
+                    {socialLinks.instagram && (
+                      <a 
+                        href={socialLinks.instagram} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-4 py-2 bg-[#E4405F]/10 text-[#E4405F] hover:bg-[#E4405F] hover:text-white rounded-xl text-xs font-bold transition-all border border-[#E4405F]/20"
+                      >
+                        <Instagram className="w-4 h-4" />
+                        Instagram
+                      </a>
+                    )}
+                    {socialLinks.linkedin && (
+                      <a 
+                        href={socialLinks.linkedin} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-4 py-2 bg-[#0A66C2]/10 text-[#0A66C2] hover:bg-[#0A66C2] hover:text-white rounded-xl text-xs font-bold transition-all border border-[#0A66C2]/20"
+                      >
+                        <Linkedin className="w-4 h-4" />
+                        LinkedIn
+                      </a>
+                    )}
+                    {!socialLinks.facebook && !socialLinks.instagram && !socialLinks.linkedin && (
+                      <p className="text-[10px] text-slate-400 italic">No social links configured in Admin Center.</p>
+                    )}
                   </div>
                 </div>
               </div>
