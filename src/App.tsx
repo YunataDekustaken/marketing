@@ -43,7 +43,9 @@ import {
   User as UserIcon,
   ShieldCheck,
   Download,
-  Info
+  Info,
+  PanelLeftClose,
+  PanelLeftOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from 'date-fns';
@@ -950,6 +952,8 @@ export default function App() {
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [error, setError] = useState<string | null>(null);
   const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([
     { id: '1', title: 'New Task Created', message: 'A new task "Spring Campaign" has been added.', time: '5m ago', read: false },
@@ -1434,94 +1438,112 @@ export default function App() {
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
       {/* Sidebar */}
-      <aside className="w-64 bg-primary-dark text-slate-300 flex flex-col shrink-0">
-        <div className="p-6 flex items-center gap-3">
-          <div className="px-3 h-10 bg-amber-500 rounded-lg flex items-center justify-center text-white font-bold text-lg tracking-tight">
-            STLAF
-          </div>
-          <div>
-            <h2 className="text-sm font-bold text-white leading-tight">Content Planner</h2>
-            <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Marketing Department</p>
-          </div>
+      <aside 
+        onMouseEnter={() => isSidebarCollapsed && setIsSidebarHovered(true)}
+        onMouseLeave={() => setIsSidebarHovered(false)}
+        className={`${isSidebarCollapsed && !isSidebarHovered ? 'w-20' : 'w-64'} bg-primary-dark text-slate-300 flex flex-col shrink-0 transition-all duration-300 ease-in-out relative z-30 shadow-2xl`}
+      >
+        <div className={`px-4 pt-4 flex ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'justify-end'}`}>
+          <button 
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-all"
+            title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+          >
+            {isSidebarCollapsed ? <PanelLeftOpen className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
+          </button>
         </div>
 
-        <nav className="flex-1 px-3 space-y-1 mt-4">
+        <div className={`p-6 pt-2 flex items-center ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'gap-3'}`}>
+          <div className="px-3 h-10 bg-amber-500 rounded-lg flex items-center justify-center text-white font-bold text-lg tracking-tight shrink-0">
+            STLAF
+          </div>
+          {(!isSidebarCollapsed || isSidebarHovered) && (
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="overflow-hidden whitespace-nowrap"
+            >
+              <h2 className="text-sm font-bold text-white leading-tight">Content Planner</h2>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Marketing Department</p>
+            </motion.div>
+          )}
+        </div>
+
+        <nav className="flex-1 px-3 space-y-1 mt-4 overflow-hidden">
           <button 
             onClick={() => setViewMode('list')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${viewMode === 'list' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white hover:text-primary-dark text-slate-400'}`}
+            className={`w-full flex items-center ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all ${viewMode === 'list' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white hover:text-primary-dark text-slate-400'}`}
+            title={isSidebarCollapsed && !isSidebarHovered ? "Monthly Table" : ""}
           >
-            <LayoutList className="w-5 h-5" />
-            Monthly Table
+            <LayoutList className="w-5 h-5 shrink-0" />
+            {(!isSidebarCollapsed || isSidebarHovered) && <span className="whitespace-nowrap">Monthly Table</span>}
           </button>
           <button 
             onClick={() => setViewMode('kanban')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${viewMode === 'kanban' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white hover:text-primary-dark text-slate-400'}`}
+            className={`w-full flex items-center ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all ${viewMode === 'kanban' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white hover:text-primary-dark text-slate-400'}`}
+            title={isSidebarCollapsed && !isSidebarHovered ? "Kanban Board" : ""}
           >
-            <Columns className="w-5 h-5" />
-            Kanban Board
+            <Columns className="w-5 h-5 shrink-0" />
+            {(!isSidebarCollapsed || isSidebarHovered) && <span className="whitespace-nowrap">Kanban Board</span>}
           </button>
           <button 
             onClick={() => setViewMode('calendar')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${viewMode === 'calendar' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white hover:text-primary-dark text-slate-400'}`}
+            className={`w-full flex items-center ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all ${viewMode === 'calendar' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white hover:text-primary-dark text-slate-400'}`}
+            title={isSidebarCollapsed && !isSidebarHovered ? "Calendar View" : ""}
           >
-            <CalendarIcon className="w-5 h-5" />
-            Calendar View
+            <CalendarIcon className="w-5 h-5 shrink-0" />
+            {(!isSidebarCollapsed || isSidebarHovered) && <span className="whitespace-nowrap">Calendar View</span>}
           </button>
           
           <div className="pt-4 mt-4 border-t border-slate-700/50">
             <button 
               onClick={() => setViewMode('admin')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${viewMode === 'admin' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white hover:text-primary-dark text-slate-400'}`}
+              className={`w-full flex items-center ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all ${viewMode === 'admin' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white hover:text-primary-dark text-slate-400'}`}
+              title={isSidebarCollapsed && !isSidebarHovered ? "Admin Center" : ""}
             >
-              <ShieldCheck className="w-5 h-5" />
-              Admin Center
+              <ShieldCheck className="w-5 h-5 shrink-0" />
+              {(!isSidebarCollapsed || isSidebarHovered) && <span className="whitespace-nowrap">Admin Center</span>}
             </button>
-            <button className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white hover:text-primary-dark rounded-xl transition-all text-slate-400">
-              <UserIcon className="w-5 h-5" />
-              My Account
+            <button 
+              className={`w-full flex items-center ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'gap-3 px-4'} py-3 hover:bg-white hover:text-primary-dark rounded-xl transition-all text-slate-400`}
+              title={isSidebarCollapsed && !isSidebarHovered ? "My Account" : ""}
+            >
+              <UserIcon className="w-5 h-5 shrink-0" />
+              {(!isSidebarCollapsed || isSidebarHovered) && <span className="whitespace-nowrap">My Account</span>}
             </button>
           </div>
         </nav>
 
-        <div className="p-6 border-t border-slate-700/50">
-          {error && !user && (
-            <div className="mb-4 p-2 bg-rose-500/10 border border-rose-500/20 rounded-lg flex items-start gap-2">
-              <AlertCircle className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] text-rose-200 leading-tight">{error}</p>
-                <button 
-                  onClick={() => setError(null)}
-                  className="text-[9px] text-rose-400 hover:text-rose-300 font-bold uppercase mt-1"
-                >
-                  Dismiss
-                </button>
-              </div>
-            </div>
-          )}
+        <div className="p-4 border-t border-slate-700/50 flex flex-col gap-4">
           {user ? (
-            <div className="flex items-center gap-3">
+            <div className={`flex items-center ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'gap-3'}`}>
               {user.photoURL && (
-                <img src={user.photoURL} className="w-8 h-8 rounded-full border border-slate-600" alt="Profile" referrerPolicy="no-referrer" />
+                <img src={user.photoURL} className="w-8 h-8 rounded-full border border-slate-600 shrink-0" alt="Profile" referrerPolicy="no-referrer" />
               )}
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-white truncate">{user.displayName}</p>
-                <p className="text-[10px] text-slate-500 truncate">{user.email}</p>
-              </div>
-              <button 
-                onClick={handleLogout}
-                className="p-1.5 text-slate-500 hover:text-rose-400 transition-all"
-                title="Sign Out"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              {(!isSidebarCollapsed || isSidebarHovered) && (
+                <div className="flex-1 min-w-0 overflow-hidden">
+                  <p className="text-xs font-bold text-white truncate">{user.displayName}</p>
+                  <p className="text-[10px] text-slate-500 truncate">{user.email}</p>
+                </div>
+              )}
+              {(!isSidebarCollapsed || isSidebarHovered) && (
+                <button 
+                  onClick={handleLogout}
+                  className="p-1.5 text-slate-500 hover:text-rose-400 transition-all shrink-0"
+                  title="Sign Out"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
           ) : (
             <button 
               onClick={handleLogin}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-lg transition-all"
+              className={`w-full flex items-center justify-center ${isSidebarCollapsed && !isSidebarHovered ? 'p-2' : 'gap-2 px-4 py-2'} bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-lg transition-all`}
+              title={isSidebarCollapsed && !isSidebarHovered ? "Sign In" : ""}
             >
-              <Lock className="w-3.5 h-3.5" />
-              Sign In
+              <Lock className="w-3.5 h-3.5 shrink-0" />
+              {(!isSidebarCollapsed || isSidebarHovered) && <span className="whitespace-nowrap">Sign In</span>}
             </button>
           )}
         </div>
