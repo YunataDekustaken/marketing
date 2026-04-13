@@ -1224,7 +1224,7 @@ export default function App() {
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
       {/* Sidebar */}
-      <aside className="w-64 bg-[#1e293b] text-slate-300 flex flex-col shrink-0">
+      <aside className="w-64 bg-primary-dark text-slate-300 flex flex-col shrink-0">
         <div className="p-6 flex items-center gap-3">
           <div className="px-3 h-10 bg-amber-500 rounded-lg flex items-center justify-center text-white font-bold text-lg tracking-tight">
             STLAF
@@ -1238,21 +1238,21 @@ export default function App() {
         <nav className="flex-1 px-3 space-y-1 mt-4">
           <button 
             onClick={() => setViewMode('list')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${viewMode === 'list' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-slate-800 hover:text-white text-slate-400'}`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${viewMode === 'list' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white hover:text-primary-dark text-slate-400'}`}
           >
             <LayoutList className="w-5 h-5" />
             Monthly Table
           </button>
           <button 
             onClick={() => setViewMode('kanban')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${viewMode === 'kanban' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-slate-800 hover:text-white text-slate-400'}`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${viewMode === 'kanban' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white hover:text-primary-dark text-slate-400'}`}
           >
             <Columns className="w-5 h-5" />
             Kanban Board
           </button>
           <button 
             onClick={() => setViewMode('calendar')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${viewMode === 'calendar' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-slate-800 hover:text-white text-slate-400'}`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${viewMode === 'calendar' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white hover:text-primary-dark text-slate-400'}`}
           >
             <CalendarIcon className="w-5 h-5" />
             Calendar View
@@ -1261,12 +1261,12 @@ export default function App() {
           <div className="pt-4 mt-4 border-t border-slate-700/50">
             <button 
               onClick={() => setViewMode('admin')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${viewMode === 'admin' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-slate-800 hover:text-white text-slate-400'}`}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${viewMode === 'admin' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white hover:text-primary-dark text-slate-400'}`}
             >
               <ShieldCheck className="w-5 h-5" />
               Admin Center
             </button>
-            <button className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-800 hover:text-white rounded-xl transition-all text-slate-400">
+            <button className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white hover:text-primary-dark rounded-xl transition-all text-slate-400">
               <UserIcon className="w-5 h-5" />
               My Account
             </button>
