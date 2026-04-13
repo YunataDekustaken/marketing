@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --color-primary-dark: #1e293b;
+  --color-accent: #ca8a04;
+  --color-bg-main: #f8fafc;
+}
+
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar {
     display: none;
@@ -8,4 +15,8 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+}
+
+body {
+  @apply bg-[family-name:var(--font-sans)] bg-bg-main text-slate-900;
 }

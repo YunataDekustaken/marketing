@@ -34,7 +34,13 @@ import {
   Check,
   GripVertical,
   Lock,
-  Unlock
+  Unlock,
+  Bell,
+  Home,
+  ClipboardList,
+  BarChart3,
+  Settings,
+  User as UserIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from 'date-fns';
@@ -47,6 +53,7 @@ import {
   useSensors,
   DragEndEvent,
 } from '@dnd-kit/core';
+import { restrictToHorizontalAxis } from '@dnd-kit/modifiers';
 import {
   arrayMove,
   SortableContext,
@@ -139,10 +146,10 @@ interface TableColumn {
 }
 
 const STATUS_COLORS: Record<PostStatus, string> = {
-  'Not Started': 'bg-gray-100 text-gray-700 border-gray-200',
-  'In Progress': 'bg-blue-100 text-blue-700 border-blue-200',
-  'Ready for Review': 'bg-amber-100 text-amber-700 border-amber-200',
-  'Scheduled': 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  'Not Started': 'bg-slate-100 text-slate-600 border-slate-200',
+  'In Progress': 'bg-blue-50 text-blue-600 border-blue-100',
+  'Ready for Review': 'bg-amber-50 text-amber-600 border-amber-100',
+  'Scheduled': 'bg-emerald-50 text-emerald-600 border-emerald-100',
 };
 
 const STATUS_ICONS: Record<PostStatus, any> = {
@@ -196,10 +203,10 @@ const KanbanView: React.FC<KanbanViewProps> = ({ filteredPosts, setFormData, han
                   layout
                   key={post.id}
                   onClick={() => handleOpenModal(post)}
-                  className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer group"
+                  className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-amber-300 transition-all cursor-pointer group"
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50 px-2 py-0.5 rounded">
+                    <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider bg-amber-50 px-2 py-0.5 rounded">
                       {post.contentTitle}
                     </span>
                     <div className="text-[10px] text-slate-400 font-medium">
@@ -270,10 +277,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentMonth, posts, handle
           return (
             <div 
               key={idx} 
-              className={`border-r border-b border-slate-100 p-2 flex flex-col gap-1 overflow-hidden transition-colors ${!isCurrentMonth ? 'bg-slate-50/50' : 'bg-white'} ${isToday ? 'bg-indigo-50/30' : ''} group`}
+              className={`border-r border-b border-slate-100 p-2 flex flex-col gap-1 overflow-hidden transition-colors ${!isCurrentMonth ? 'bg-slate-50/50' : 'bg-white'} ${isToday ? 'bg-amber-50/30' : ''} group`}
             >
               <div className="flex items-center justify-between mb-1">
-                <span className={`text-xs font-bold ${!isCurrentMonth ? 'text-slate-300' : isToday ? 'text-indigo-600' : 'text-slate-500'} ${isToday ? 'bg-indigo-100 w-6 h-6 flex items-center justify-center rounded-full' : ''}`}>
+                <span className={`text-xs font-bold ${!isCurrentMonth ? 'text-slate-300' : isToday ? 'text-amber-600' : 'text-slate-500'} ${isToday ? 'bg-amber-100 w-6 h-6 flex items-center justify-center rounded-full' : ''}`}>
                   {format(day, 'd')}
                 </span>
                 {isCurrentMonth && (
@@ -282,7 +289,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentMonth, posts, handle
                       const newPost = await handleCreateForDate(format(day, 'yyyy-MM-dd'));
                       if (newPost) handleOpenModal(newPost);
                     }}
-                    className="p-0.5 hover:bg-slate-100 rounded text-slate-300 hover:text-indigo-600 transition-colors opacity-0 group-hover:opacity-100"
+                    className="p-0.5 hover:bg-slate-100 rounded text-slate-300 hover:text-amber-600 transition-colors opacity-0 group-hover:opacity-100"
                   >
                     <Plus className="w-3 h-3" />
                   </button>
@@ -370,7 +377,7 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
     switch (colId) {
       case 'date':
         return pIdx === 0 ? (
-          <div className={`text-xs font-bold ${isToday ? 'text-indigo-600' : 'text-slate-700'}`}>
+          <div className={`text-xs font-bold ${isToday ? 'text-amber-600' : 'text-slate-700'}`}>
             {format(day, 'EEE, MMM d')}
           </div>
         ) : null;
@@ -436,10 +443,10 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
               )}
               <button 
                 onClick={() => handleOpenModal(post)}
-                className="p-1 bg-white/80 border border-slate-200 rounded shadow-sm hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
-                title="Edit Post"
+                className="p-1 bg-white/80 border border-slate-200 rounded shadow-sm hover:bg-amber-50 hover:text-amber-600 transition-colors"
+                title="AI Generation"
               >
-                <Edit2 className="w-3 h-3" />
+                <Sparkles className="w-3 h-3" />
               </button>
             </div>
           </div>
@@ -519,23 +526,6 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
             className="w-full bg-transparent border-none text-sm text-slate-700 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none hover:bg-slate-100"
           />
         );
-      case 'ai':
-        return (
-          <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button 
-              onClick={() => handleOpenModal(post)}
-              className="p-1.5 hover:bg-indigo-50 text-indigo-600 rounded-md transition-colors"
-            >
-              <Sparkles className="w-4 h-4" />
-            </button>
-            <button 
-              onClick={() => handleDeletePost(post.id)}
-              className="p-1.5 hover:bg-rose-50 text-rose-600 rounded-md transition-colors"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
-        );
       default:
         if (colId.toString().startsWith('custom_') || colId.toString() === 'notes') {
           return (
@@ -593,7 +583,6 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
                         { id: 'funnelStatus', label: 'Funnel', width: 'w-40', visible: false },
                         { id: 'visualIdeas', label: 'Visual Ideas', width: 'w-64', visible: false },
                         { id: 'notes', label: 'Notes', width: 'w-64', visible: false },
-                        { id: 'ai', label: 'AI', width: 'w-24', visible: true },
                       ])}
                       className="text-[10px] font-bold text-indigo-600 hover:underline"
                     >
@@ -650,60 +639,86 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
         sensors={sensors}
         collisionDetection={closestCenter}
         onDragEnd={handleDragEnd}
+        modifiers={[restrictToHorizontalAxis]}
       >
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse table-fixed">
-            <thead>
-              <SortableContext 
-                items={visibleColumns.map(c => c.id)}
-                strategy={horizontalListSortingStrategy}
-              >
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  {visibleColumns.map((col) => (
-                    <SortableHeader key={col.id.toString()} col={col} isLocked={isColumnsLocked} />
-                  ))}
-                </tr>
-              </SortableContext>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {days.map((day) => {
-                const dateStr = format(day, 'yyyy-MM-dd');
-                const dayPosts = posts.filter(p => p.date === dateStr);
-                const isToday = isSameDay(day, new Date());
+        <div className="overflow-x-auto no-scrollbar">
+          <table className="w-full text-left border-collapse table-fixed min-w-[1200px]">
+              <thead>
+                <SortableContext 
+                  items={visibleColumns.map(c => c.id)}
+                  strategy={horizontalListSortingStrategy}
+                >
+                  <tr className="bg-slate-50/50 border-b border-slate-200">
+                    {visibleColumns.map((col) => (
+                      <SortableHeader key={col.id.toString()} col={col} isLocked={isColumnsLocked} />
+                    ))}
+                    <th className="w-24 px-4 py-3 sticky right-0 bg-slate-50/50 border-l border-slate-200">
+                    </th>
+                  </tr>
+                </SortableContext>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {days.map((day) => {
+                  const dateStr = format(day, 'yyyy-MM-dd');
+                  const dayPosts = posts.filter(p => p.date === dateStr);
+                  const isToday = isSameDay(day, new Date());
 
-                if (dayPosts.length === 0) {
-                  return (
-                    <tr key={dateStr} className={`group hover:bg-slate-50/50 transition-colors ${isToday ? 'bg-indigo-50/20' : ''}`}>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <div className={`text-xs font-medium ${isToday ? 'text-indigo-600' : 'text-slate-400'}`}>
-                          {format(day, 'EEE, MMM d')}
+                  if (dayPosts.length === 0) {
+                    return (
+                      <tr key={dateStr} className={`group hover:bg-slate-50/50 transition-colors ${isToday ? 'bg-amber-50/20' : ''}`}>
+                        {visibleColumns.map((col, idx) => (
+                          <td key={col.id} className="px-4 py-3 align-top">
+                            {col.id === 'date' ? (
+                              <div className={`text-xs font-bold ${isToday ? 'text-amber-600' : 'text-slate-400'}`}>
+                                {format(day, 'EEE, MMM d')}
+                              </div>
+                            ) : idx === 1 ? (
+                              <button 
+                                onClick={() => handleCreateForDate(dateStr).then(p => p && handleOpenModal(p))}
+                                className="text-xs text-slate-300 italic hover:text-amber-500 transition-colors flex items-center gap-1"
+                              >
+                                <Plus className="w-3 h-3" />
+                                Add content...
+                              </button>
+                            ) : null}
+                          </td>
+                        ))}
+                        <td className="px-4 py-3 align-top sticky right-0 bg-white group-hover:bg-slate-50/50 transition-colors border-l border-slate-100"></td>
+                      </tr>
+                    );
+                  }
+
+                  return dayPosts.map((post, pIdx) => (
+                    <tr key={post.id} className={`group hover:bg-slate-50/50 transition-colors ${isToday ? 'bg-amber-50/20' : ''}`}>
+                      {visibleColumns.map((col) => (
+                        <td key={col.id} className="px-4 py-3 align-top">
+                          {renderCell(post, col.id, day, pIdx)}
+                        </td>
+                      ))}
+                      <td className="px-4 py-3 align-top sticky right-0 bg-white group-hover:bg-slate-50/50 transition-colors border-l border-slate-100">
+                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button 
+                            onClick={() => handleOpenModal(post)}
+                            className="p-1.5 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-amber-600 transition-colors"
+                            title="Edit Post"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => handleDeletePost(post.id)}
+                            className="p-1.5 hover:bg-rose-50 rounded-lg text-rose-600 transition-colors"
+                            title="Delete Post"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
                       </td>
-                      <td colSpan={visibleColumns.length - 1} className="px-4 py-3">
-                        <button 
-                          onClick={() => handleCreateForDate(dateStr)}
-                          className="w-full text-left text-xs text-slate-300 italic hover:text-indigo-400 transition-colors py-1"
-                        >
-                          + Click to add content...
-                        </button>
-                      </td>
                     </tr>
-                  );
-                }
-
-                return dayPosts.map((post, pIdx) => (
-                  <tr key={post.id} className={`group hover:bg-slate-50/50 transition-colors ${isToday ? 'bg-indigo-50/20' : ''}`}>
-                    {visibleColumns.map((col) => (
-                      <td key={col.id} className="px-2 py-2 align-top">
-                        {renderCell(post, col.id, day, pIdx)}
-                      </td>
-                    ))}
-                  </tr>
-                ));
-              })}
-            </tbody>
-          </table>
-        </div>
+                  ));
+                })}
+              </tbody>
+            </table>
+          </div>
       </DndContext>
     </div>
   );
@@ -738,7 +753,6 @@ export default function App() {
     { id: 'funnelStatus', label: 'Funnel', width: 'w-40', visible: false },
     { id: 'visualIdeas', label: 'Visual Ideas', width: 'w-64', visible: false },
     { id: 'notes', label: 'Notes', width: 'w-64', visible: false },
-    { id: 'ai', label: 'AI', width: 'w-24', visible: true },
   ]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1043,9 +1057,16 @@ export default function App() {
   };
 
   const handleLogin = async () => {
+    setError(null);
     try {
       await signInWithPopup(auth, googleProvider);
-    } catch (err) {
+    } catch (err: any) {
+      if (err.code === 'auth/popup-closed-by-user') {
+        // User closed the popup, usually not an error we need to scream about
+        console.log("Login popup closed by user");
+        return;
+      }
+      setError(err.message || "Login failed. Please try again.");
       console.error("Login failed", err);
     }
   };
@@ -1079,189 +1100,258 @@ export default function App() {
   if (!isAuthReady) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+        <Loader2 className="w-8 h-8 text-amber-600 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-white border-b border-slate-200 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Monthly Content Strategy Dashboard</h1>
-            <p className="text-sm text-slate-500">Plan, track, and generate AI-powered social media content</p>
+    <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
+      {/* Sidebar */}
+      <aside className="w-64 bg-[#1e293b] text-slate-300 flex flex-col shrink-0">
+        <div className="p-6 flex items-center gap-3">
+          <div className="px-3 h-10 bg-amber-500 rounded-lg flex items-center justify-center text-white font-bold text-lg tracking-tight">
+            STLAF
           </div>
-          <div className="flex items-center gap-3">
-            {user ? (
-              <div className="flex items-center gap-3 mr-4 border-r border-slate-200 pr-4">
-                <div className="flex items-center gap-2">
-                  {user.photoURL && (
-                    <img src={user.photoURL} className="w-8 h-8 rounded-full border border-slate-200" alt="Profile" referrerPolicy="no-referrer" />
-                  )}
-                  <div className="hidden sm:block">
-                    <p className="text-xs font-bold text-slate-900 leading-none">{user.displayName}</p>
-                    <p className="text-[10px] text-slate-500">{user.email}</p>
+          <div>
+            <h2 className="text-sm font-bold text-white leading-tight">Content Planner</h2>
+            <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Marketing Department</p>
+          </div>
+        </div>
+
+        <nav className="flex-1 px-3 space-y-1 mt-4">
+          <button 
+            onClick={() => setViewMode('list')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${viewMode === 'list' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-slate-800 hover:text-white text-slate-400'}`}
+          >
+            <LayoutList className="w-5 h-5" />
+            Monthly Table
+          </button>
+          <button 
+            onClick={() => setViewMode('kanban')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${viewMode === 'kanban' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-slate-800 hover:text-white text-slate-400'}`}
+          >
+            <Columns className="w-5 h-5" />
+            Kanban Board
+          </button>
+          <button 
+            onClick={() => setViewMode('calendar')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${viewMode === 'calendar' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-slate-800 hover:text-white text-slate-400'}`}
+          >
+            <CalendarIcon className="w-5 h-5" />
+            Calendar View
+          </button>
+          
+          <div className="pt-4 mt-4 border-t border-slate-700/50">
+            <button className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-800 hover:text-white rounded-xl transition-all text-slate-400">
+              <UserIcon className="w-5 h-5" />
+              My Account
+            </button>
+          </div>
+        </nav>
+
+        <div className="p-6 border-t border-slate-700/50">
+          {error && !user && (
+            <div className="mb-4 p-2 bg-rose-500/10 border border-rose-500/20 rounded-lg flex items-start gap-2">
+              <AlertCircle className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] text-rose-200 leading-tight">{error}</p>
+                <button 
+                  onClick={() => setError(null)}
+                  className="text-[9px] text-rose-400 hover:text-rose-300 font-bold uppercase mt-1"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          )}
+          {user ? (
+            <div className="flex items-center gap-3">
+              {user.photoURL && (
+                <img src={user.photoURL} className="w-8 h-8 rounded-full border border-slate-600" alt="Profile" referrerPolicy="no-referrer" />
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-white truncate">{user.displayName}</p>
+                <p className="text-[10px] text-slate-500 truncate">{user.email}</p>
+              </div>
+              <button 
+                onClick={handleLogout}
+                className="p-1.5 text-slate-500 hover:text-rose-400 transition-all"
+                title="Sign Out"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <button 
+              onClick={handleLogin}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-lg transition-all"
+            >
+              <Lock className="w-3.5 h-3.5" />
+              Sign In
+            </button>
+          )}
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <header className="h-16 bg-white border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-10">
+          <h1 className="text-lg font-bold text-slate-800">
+            {viewMode === 'list' ? 'Monthly Table' : viewMode === 'kanban' ? 'Kanban Board' : 'Calendar View'}
+          </h1>
+          <div className="flex items-center gap-6">
+            <button className="text-slate-400 hover:text-slate-600 transition-colors">
+              <Bell className="w-5 h-5" />
+            </button>
+          </div>
+        </header>
+
+        <main className="flex-1 p-8 overflow-y-auto">
+          <div className="max-w-7xl mx-auto">
+            {/* Page Title & Actions */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900">Content Strategy Planner</h2>
+                <p className="text-sm text-slate-500">Plan and manage your content across all channels.</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={handleRestoreOldData}
+                  disabled={isSeeding}
+                  className="flex items-center gap-2 bg-white border border-slate-200 px-5 py-2.5 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm disabled:opacity-50"
+                >
+                  <Undo2 className="w-4 h-4" />
+                  {isSeeding ? 'Restoring...' : 'Export CSV'}
+                </button>
+                <button 
+                  onClick={() => handleOpenModal()}
+                  className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-slate-900 px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create New Task
+                </button>
+              </div>
+            </div>
+
+            {/* Month Navigation & Filters */}
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-6">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
+                  <button onClick={handlePrevMonth} className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-600 transition-colors">
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <div className="px-4 font-bold text-slate-800 min-w-[160px] text-center">
+                    {format(currentMonth, 'MMMM yyyy')}
                   </div>
+                  <button onClick={handleNextMonth} className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-600 transition-colors">
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
                 </div>
                 <button 
-                  onClick={handleLogout}
-                  className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-all"
-                  title="Sign Out"
+                  onClick={handleToday}
+                  className="text-sm font-bold text-slate-600 hover:text-amber-600 px-4 py-2 bg-white border border-slate-200 rounded-xl shadow-sm transition-all"
                 >
-                  <X className="w-4 h-4" />
+                  Today
                 </button>
               </div>
-            ) : (
-              <div className="flex items-center gap-3 mr-4 border-r border-slate-200 pr-4">
-                <button 
-                  onClick={handleLogin}
-                  className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all border border-indigo-200"
-                >
-                  <Lock className="w-3.5 h-3.5" />
-                  Sign In
-                </button>
+
+              <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+                <div className="relative flex-1 md:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input 
+                    type="text" 
+                    placeholder="Search content..."
+                    className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all shadow-sm text-sm"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center bg-white border border-slate-200 p-1 rounded-xl shadow-sm">
+                    <button 
+                      onClick={() => setViewMode('list')}
+                      className={`p-1.5 rounded-lg transition-all ${viewMode === 'list' ? 'bg-slate-100 text-amber-600' : 'text-slate-500 hover:text-slate-700'}`}
+                      title="List View"
+                    >
+                      <LayoutList className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => setViewMode('kanban')}
+                      className={`p-1.5 rounded-lg transition-all ${viewMode === 'kanban' ? 'bg-slate-100 text-amber-600' : 'text-slate-500 hover:text-slate-700'}`}
+                      title="Kanban View"
+                    >
+                      <Columns className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => setViewMode('calendar')}
+                      className={`p-1.5 rounded-lg transition-all ${viewMode === 'calendar' ? 'bg-slate-100 text-amber-600' : 'text-slate-500 hover:text-slate-700'}`}
+                      title="Calendar View"
+                    >
+                      <CalendarIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <select 
+                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500/20 shadow-sm"
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value as any)}
+                  >
+                    <option value="All">All Statuses</option>
+                    <option value="Not Started">Not Started</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Ready for Review">Ready for Review</option>
+                    <option value="Scheduled">Scheduled</option>
+                  </select>
+                </div>
               </div>
-            )}
-            
-            <button 
-              onClick={handleRestoreOldData}
-              disabled={isSeeding}
-              className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-amber-600 hover:bg-amber-50 rounded-lg transition-all border border-amber-200 disabled:opacity-50"
-            >
-              <Undo2 className="w-3.5 h-3.5" />
-              {isSeeding ? 'Restoring...' : 'Restore Old Data'}
-            </button>
-
-            <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200">
-              <button 
-                onClick={() => setViewMode('list')}
-                className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
-                title="List View"
-              >
-                <LayoutList className="w-4 h-4" />
-              </button>
-              <button 
-                onClick={() => setViewMode('kanban')}
-                className={`p-1.5 rounded-md transition-all ${viewMode === 'kanban' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
-                title="Kanban View"
-              >
-                <Columns className="w-4 h-4" />
-              </button>
-              <button 
-                onClick={() => setViewMode('calendar')}
-                className={`p-1.5 rounded-md transition-all ${viewMode === 'calendar' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
-                title="Calendar View"
-              >
-                <CalendarIcon className="w-4 h-4" />
-              </button>
             </div>
-            <button 
-              onClick={() => handleOpenModal()}
-              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm"
-            >
-              <Plus className="w-4 h-4" />
-              New Post
-            </button>
-          </div>
-        </div>
-      </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        {/* Month Navigation & Filters */}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-8">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-1 shadow-sm">
-              <button onClick={handlePrevMonth} className="p-1.5 hover:bg-slate-50 rounded-md text-slate-600 transition-colors">
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <div className="px-4 font-bold text-slate-800 min-w-[160px] text-center">
-                {format(currentMonth, 'MMMM yyyy')}
-              </div>
-              <button onClick={handleNextMonth} className="p-1.5 hover:bg-slate-50 rounded-md text-slate-600 transition-colors">
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
-            <button 
-              onClick={handleToday}
-              className="text-sm font-semibold text-slate-600 hover:text-indigo-600 px-3 py-2 bg-white border border-slate-200 rounded-lg shadow-sm transition-all"
-            >
-              Today
-            </button>
-          </div>
-
-          <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
-            <div className="relative flex-1 md:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input 
-                type="text" 
-                placeholder="Search content..."
-                className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-slate-400" />
-              <select 
-                className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as any)}
-              >
-                <option value="All">All Statuses</option>
-                <option value="Not Started">Not Started</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Ready for Review">Ready for Review</option>
-                <option value="Scheduled">Scheduled</option>
-              </select>
+            {/* View Content */}
+            <div className="min-h-[400px]">
+              {viewMode === 'list' && (
+                <MonthlyTableView 
+                  currentMonth={currentMonth}
+                  tableColumns={tableColumns}
+                  posts={filteredPosts}
+                  handleUpdatePostInline={handleUpdatePostInline}
+                  handleCreateForDate={handleCreateForDate}
+                  showColumnSettings={showColumnSettings}
+                  setShowColumnSettings={setShowColumnSettings}
+                  setTableColumns={setTableColumns}
+                  toggleColumnVisibility={toggleColumnVisibility}
+                  addCustomColumn={addCustomColumn}
+                  sensors={sensors}
+                  handleDragEnd={handleDragEnd}
+                  isColumnsLocked={isColumnsLocked}
+                  setIsColumnsLocked={setIsColumnsLocked}
+                  handleCopy={handleCopy}
+                  copiedId={copiedId}
+                  setPreviewImage={setPreviewImage}
+                  handleOpenModal={handleOpenModal}
+                  handleDeletePost={handleDeletePost}
+                  searchQuery={searchQuery}
+                />
+              )}
+              {viewMode === 'kanban' && (
+                <KanbanView 
+                  filteredPosts={filteredPosts}
+                  setFormData={setFormData}
+                  handleOpenModal={handleOpenModal}
+                />
+              )}
+              {viewMode === 'calendar' && (
+                <CalendarView 
+                  currentMonth={currentMonth}
+                  posts={filteredPosts}
+                  handleCreateForDate={handleCreateForDate}
+                  handleOpenModal={handleOpenModal}
+                />
+              )}
             </div>
           </div>
-        </div>
-
-        {/* View Content */}
-        <div className="min-h-[400px]">
-          {viewMode === 'list' && (
-            <MonthlyTableView 
-              currentMonth={currentMonth}
-              tableColumns={tableColumns}
-              posts={filteredPosts}
-              handleUpdatePostInline={handleUpdatePostInline}
-              handleCreateForDate={handleCreateForDate}
-              showColumnSettings={showColumnSettings}
-              setShowColumnSettings={setShowColumnSettings}
-              setTableColumns={setTableColumns}
-              toggleColumnVisibility={toggleColumnVisibility}
-              addCustomColumn={addCustomColumn}
-              sensors={sensors}
-              handleDragEnd={handleDragEnd}
-              isColumnsLocked={isColumnsLocked}
-              setIsColumnsLocked={setIsColumnsLocked}
-              handleCopy={handleCopy}
-              copiedId={copiedId}
-              setPreviewImage={setPreviewImage}
-              handleOpenModal={handleOpenModal}
-              handleDeletePost={handleDeletePost}
-              searchQuery={searchQuery}
-            />
-          )}
-          {viewMode === 'kanban' && (
-            <KanbanView 
-              filteredPosts={filteredPosts}
-              setFormData={setFormData}
-              handleOpenModal={handleOpenModal}
-            />
-          )}
-          {viewMode === 'calendar' && (
-            <CalendarView 
-              currentMonth={currentMonth}
-              posts={filteredPosts}
-              handleCreateForDate={handleCreateForDate}
-              handleOpenModal={handleOpenModal}
-            />
-          )}
-        </div>
-      </main>
+        </main>
+      </div>
 
       {/* Modal / Form */}
       <AnimatePresence>
@@ -1291,7 +1381,7 @@ export default function App() {
                     <label className="text-xs font-medium text-slate-500 uppercase">Date</label>
                     <input 
                       type="date" 
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all"
                       value={formData.date}
                       onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
                     />
@@ -1299,7 +1389,7 @@ export default function App() {
                   <div className="space-y-1.5">
                     <label className="text-xs font-medium text-slate-500 uppercase">Status</label>
                     <select 
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all"
                       value={formData.status}
                       onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as PostStatus }))}
                     >
@@ -1332,7 +1422,7 @@ export default function App() {
                     ))}
                     <button 
                       onClick={() => fileInputRef.current?.click()}
-                      className="h-20 w-20 rounded-lg border-2 border-dashed border-slate-300 flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50 transition-all"
+                      className="h-20 w-20 rounded-lg border-2 border-dashed border-slate-300 flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-amber-600 hover:border-amber-400 hover:bg-amber-50 transition-all"
                     >
                       <Upload className="w-5 h-5" />
                       <span className="text-[10px] font-medium">Upload</span>
@@ -1352,7 +1442,7 @@ export default function App() {
                   <div className="space-y-1.5">
                     <label className="text-xs font-medium text-slate-500 uppercase">Content Title</label>
                     <select 
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all"
                       value={formData.contentTitle}
                       onChange={(e) => setFormData(prev => ({ ...prev, contentTitle: e.target.value }))}
                     >
@@ -1364,7 +1454,7 @@ export default function App() {
                   <div className="space-y-1.5">
                     <label className="text-xs font-medium text-slate-500 uppercase">Content Type</label>
                     <select 
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all"
                       value={formData.contentType}
                       onChange={(e) => setFormData(prev => ({ ...prev, contentType: e.target.value }))}
                     >
@@ -1379,7 +1469,7 @@ export default function App() {
                   <div className="space-y-1.5">
                     <label className="text-xs font-medium text-slate-500 uppercase">Format</label>
                     <select 
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all"
                       value={formData.format}
                       onChange={(e) => setFormData(prev => ({ ...prev, format: e.target.value }))}
                     >
@@ -1391,7 +1481,7 @@ export default function App() {
                   <div className="space-y-1.5">
                     <label className="text-xs font-medium text-slate-500 uppercase">Funnel Status</label>
                     <select 
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all"
                       value={formData.funnelStatus}
                       onChange={(e) => setFormData(prev => ({ ...prev, funnelStatus: e.target.value }))}
                     >
@@ -1407,7 +1497,7 @@ export default function App() {
                   <input 
                     type="text" 
                     placeholder="What is this content about?"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all"
                     value={formData.topicTheme}
                     onChange={(e) => setFormData(prev => ({ ...prev, topicTheme: e.target.value }))}
                   />
@@ -1418,7 +1508,7 @@ export default function App() {
                   <textarea 
                     rows={2}
                     placeholder="e.g., Make it sound more casual, mention a specific event, or use a particular tone."
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all resize-none text-sm"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all resize-none text-sm"
                     value={formData.customPrompt}
                     onChange={(e) => setFormData(prev => ({ ...prev, customPrompt: e.target.value }))}
                   />
@@ -1429,7 +1519,7 @@ export default function App() {
                   <input 
                     type="url" 
                     placeholder="Link to Canva, Figma, etc."
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all"
                     value={formData.visualIdeas}
                     onChange={(e) => setFormData(prev => ({ ...prev, visualIdeas: e.target.value }))}
                   />
@@ -1444,7 +1534,7 @@ export default function App() {
                           <button 
                             onClick={handleUndo}
                             disabled={historyIndex <= 0}
-                            className="p-1 text-slate-400 hover:text-indigo-600 disabled:text-slate-200 transition-colors"
+                            className="p-1 text-slate-400 hover:text-amber-600 disabled:text-slate-200 transition-colors"
                             title="Undo"
                           >
                             <Undo2 className="w-3.5 h-3.5" />
@@ -1452,7 +1542,7 @@ export default function App() {
                           <button 
                             onClick={handleRedo}
                             disabled={historyIndex >= captionHistory.length - 1}
-                            className="p-1 text-slate-400 hover:text-indigo-600 disabled:text-slate-200 transition-colors"
+                            className="p-1 text-slate-400 hover:text-amber-600 disabled:text-slate-200 transition-colors"
                             title="Redo"
                           >
                             <Redo2 className="w-3.5 h-3.5" />
@@ -1461,7 +1551,7 @@ export default function App() {
                         {formData.caption && (
                           <button 
                             onClick={() => handleCopy(formData.caption!, 'modal')}
-                            className="flex items-center gap-1 text-[10px] font-bold text-slate-500 hover:text-indigo-600 transition-colors px-2 py-0.5 bg-slate-100 rounded"
+                            className="flex items-center gap-1 text-[10px] font-bold text-slate-500 hover:text-amber-600 transition-colors px-2 py-0.5 bg-slate-100 rounded"
                           >
                             {copiedId === 'modal' ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
                             {copiedId === 'modal' ? 'Copied!' : 'Copy'}
@@ -1472,7 +1562,7 @@ export default function App() {
                     <button 
                       onClick={handleGenerateCaption}
                       disabled={isGenerating}
-                      className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 disabled:text-slate-400 transition-colors"
+                      className="flex items-center gap-1.5 text-xs font-semibold text-amber-600 hover:text-amber-700 disabled:text-slate-400 transition-colors"
                     >
                       {isGenerating ? (
                         <Loader2 className="w-3 h-3 animate-spin" />
@@ -1485,7 +1575,7 @@ export default function App() {
                   <textarea 
                     rows={6}
                     placeholder="Write your caption here or use AI to generate one..."
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all resize-none text-sm"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all resize-none text-sm"
                     value={formData.caption}
                     onChange={(e) => updateCaption(e.target.value)}
                   />
@@ -1512,7 +1602,7 @@ export default function App() {
                 )}
                 <button 
                   onClick={handleSavePost}
-                  className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
+                  className="px-6 py-2 bg-amber-500 hover:bg-amber-600 text-slate-900 text-sm font-bold rounded-lg transition-colors shadow-sm"
                 >
                   Save Post
                 </button>
