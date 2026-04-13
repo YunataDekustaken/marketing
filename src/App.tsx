@@ -48,7 +48,7 @@ import {
   PanelLeftOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from 'date-fns';
+import { format, formatDistanceToNow, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from 'date-fns';
 import {
   DndContext,
   closestCenter,
@@ -87,7 +87,11 @@ import {
   setDoc, 
   deleteDoc, 
   updateDoc,
-  getDocFromServer
+  getDocFromServer,
+  orderBy,
+  limit,
+  addDoc,
+  serverTimestamp
 } from 'firebase/firestore';
 
 enum OperationType {
@@ -955,11 +959,7 @@ export default function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState<any[]>([
-    { id: '1', title: 'New Task Created', message: 'A new task "Spring Campaign" has been added.', time: '5m ago', read: false },
-    { id: '2', title: 'Data Restored', message: 'Initial dataset has been successfully restored.', time: '1h ago', read: true },
-    { id: '3', title: 'Export Successful', message: 'Your CSV export is ready for download.', time: '2h ago', read: true },
-  ]);
+  const [notifications, setNotifications] = useState<any[]>([]);
 
   const [notifSettings, setNotifSettings] = useState({
     onExportCSV: true,
@@ -970,23 +970,36 @@ export default function App() {
     onAICaption: true,
   });
 
-  const addNotification = (type: keyof typeof notifSettings, title: string, message: string, postId?: string) => {
+  const addNotification = async (type: keyof typeof notifSettings, title: string, message: string, postId?: string) => {
     if (!notifSettings[type]) return;
     
+    const targetUserId = user?.uid || 'guest_user';
     const newNotif = {
-      id: Date.now().toString(),
       title,
       message,
-      time: 'Just now',
+      createdAt: serverTimestamp(),
       read: false,
-      postId
+      postId: postId || null,
+      userId: targetUserId,
+      type
     };
-    setNotifications(prev => [newNotif, ...prev]);
+    
+    try {
+      await addDoc(collection(db, 'notifications'), newNotif);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.CREATE, 'notifications');
+    }
   };
 
-  const handleNotificationClick = (notif: any) => {
-    // Mark as read
-    setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
+  const handleNotificationClick = async (notif: any) => {
+    // Mark as read in Firestore
+    if (!notif.read) {
+      try {
+        await updateDoc(doc(db, 'notifications', notif.id), { read: true });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.UPDATE, `notifications/${notif.id}`);
+      }
+    }
     
     if (notif.postId) {
       // Switch to list view if not already there
@@ -1016,6 +1029,29 @@ export default function App() {
     }
   };
 
+  const handleMarkAllRead = async () => {
+    const unreadNotifs = notifications.filter(n => !n.read);
+    const batchPromises = unreadNotifs.map(n => 
+      updateDoc(doc(db, 'notifications', n.id), { read: true })
+    );
+    try {
+      await Promise.all(batchPromises);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, 'notifications/batch');
+    }
+  };
+
+  const handleClearAllNotifications = async () => {
+    const batchPromises = notifications.map(n => 
+      deleteDoc(doc(db, 'notifications', n.id))
+    );
+    try {
+      await Promise.all(batchPromises);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, 'notifications/batch');
+    }
+  };
+
   const notificationRef = useRef<HTMLDivElement>(null);
   const columnSettingsRef = useRef<HTMLDivElement>(null);
 
@@ -1041,6 +1077,35 @@ export default function App() {
     });
     return () => unsubscribe();
   }, []);
+
+  // Notifications Listener
+  useEffect(() => {
+    if (!isAuthReady) return;
+    
+    const targetUserId = user?.uid || 'guest_user';
+    const q = query(
+      collection(db, 'notifications'),
+      where('userId', '==', targetUserId),
+      orderBy('createdAt', 'desc'),
+      limit(50)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const notifs = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          time: data.createdAt?.toDate ? formatDistanceToNow(data.createdAt.toDate(), { addSuffix: true }) : 'Just now'
+        };
+      });
+      setNotifications(notifs);
+    }, (err) => {
+      handleFirestoreError(err, OperationType.LIST, 'notifications');
+    });
+
+    return () => unsubscribe();
+  }, [isAuthReady, user]);
 
   // Firestore Data Fetching
   useEffect(() => {
@@ -1580,7 +1645,7 @@ export default function App() {
                       <h3 className="font-bold text-slate-800 text-sm">Notifications</h3>
                       <div className="flex gap-2">
                         <button 
-                          onClick={() => setNotifications(notifications.map(n => ({ ...n, read: true })))}
+                          onClick={handleMarkAllRead}
                           className="text-[10px] font-bold text-amber-600 hover:text-amber-700 uppercase tracking-wider"
                         >
                           Mark all read
@@ -1617,7 +1682,7 @@ export default function App() {
                     {notifications.length > 0 && (
                       <div className="p-3 border-t border-slate-100 bg-slate-50/50 text-center">
                         <button 
-                          onClick={() => setNotifications([])}
+                          onClick={handleClearAllNotifications}
                           className="text-[10px] font-bold text-slate-400 hover:text-rose-500 uppercase tracking-wider transition-colors"
                         >
                           Clear all notifications

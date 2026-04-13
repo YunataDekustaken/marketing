@@ -30,12 +30,32 @@
         "userId": { "type": "string", "description": "The ID of the user who owns this post" }
       },
       "required": ["id", "date", "status", "contentTitle", "contentType", "format", "topicTheme"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "A system or user notification",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "read": { "type": "boolean" },
+        "type": { "type": "string" },
+        "postId": { "type": "string", "description": "Optional reference to a post" },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "title", "message", "createdAt", "read", "userId"]
     }
   },
   "firestore": {
     "/posts/{postId}": {
       "schema": "Post",
       "description": "Collection of content strategy posts"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "Collection of user notifications"
     }
   }
 }
