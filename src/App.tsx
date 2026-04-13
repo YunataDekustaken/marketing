@@ -40,7 +40,10 @@ import {
   ClipboardList,
   BarChart3,
   Settings,
-  User as UserIcon
+  User as UserIcon,
+  ShieldCheck,
+  Download,
+  Info
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from 'date-fns';
@@ -724,6 +727,59 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
   );
 };
 
+const AdminView = ({ onRestore, isSeeding }: { onRestore: () => void, isSeeding: boolean }) => {
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200">
+        <div className="flex items-center gap-4 mb-6">
+          <div className="p-3 bg-rose-50 rounded-xl">
+            <AlertCircle className="w-6 h-6 text-rose-500" />
+          </div>
+          <h3 className="text-xl font-bold text-slate-900">Restore Old Database</h3>
+        </div>
+        
+        <p className="text-slate-600 mb-8 leading-relaxed">
+          Permanently deletes all marketing requests, comments, activity logs, and notifications. 
+          User accounts and login credentials are not affected. Uploaded files are hosted in Cloudinary, not Firestore.
+        </p>
+
+        <button 
+          onClick={onRestore}
+          disabled={isSeeding}
+          className="px-8 py-3 bg-white border border-rose-200 rounded-xl text-sm font-bold text-rose-600 hover:bg-rose-50 transition-all shadow-sm disabled:opacity-50"
+        >
+          {isSeeding ? 'Restoring...' : 'Restore Data'}
+        </button>
+      </div>
+
+      <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200">
+        <div className="flex items-center gap-4 mb-8">
+          <div className="p-3 bg-slate-50 rounded-xl">
+            <Info className="w-6 h-6 text-slate-500" />
+          </div>
+          <h3 className="text-xl font-bold text-slate-900">App Info</h3>
+        </div>
+
+        <div className="space-y-6">
+          <div>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Application Name</p>
+            <p className="text-sm font-bold text-slate-900">Marketing Operations Portal</p>
+          </div>
+
+          <div>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Firebase Project ID</p>
+            <p className="text-sm font-mono text-slate-600">gen-lang-client-0116256991</p>
+          </div>
+
+          <div className="pt-6 border-t border-slate-100">
+            <p className="text-xs italic text-slate-400">Admin Center is only accessible to Marketing Supervisors.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function App() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [user, setUser] = useState<User | null>(null);
@@ -1079,6 +1135,66 @@ export default function App() {
     }
   };
 
+  const handleExportCSV = () => {
+    if (posts.length === 0) {
+      alert('No data to export');
+      return;
+    }
+
+    const sanitizeForCSV = (text: string): string => {
+      if (!text) return '';
+      
+      // Replace common "smart" characters with plain equivalents
+      let sanitized = text
+        .replace(/[\u2018\u2019]/g, "'") // Smart single quotes
+        .replace(/[\u201C\u201D]/g, '"') // Smart double quotes
+        .replace(/\u2013/g, "-")         // En dash
+        .replace(/\u2014/g, "--")        // Em dash
+        .replace(/\u2026/g, "...");      // Ellipsis
+
+      // Remove emojis and other non-standard symbols
+      // This regex covers a wide range of emojis and symbols
+      sanitized = sanitized.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E6}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{1F018}-\u{1F270}]/gu, '');
+
+      // Remove non-printable control characters
+      sanitized = sanitized.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '');
+
+      // Escape double quotes for CSV
+      return sanitized.replace(/"/g, '""');
+    };
+
+    const headers = ['Date', 'Title', 'Type', 'Theme', 'Subtopic', 'Caption', 'Format', 'Status', 'Funnel', 'Visual Ideas', 'Notes'];
+    const rows = posts.map(post => [
+      post.date,
+      `"${sanitizeForCSV(post.contentTitle)}"`,
+      `"${sanitizeForCSV(post.contentType)}"`,
+      `"${sanitizeForCSV(post.topicTheme)}"`,
+      `"${sanitizeForCSV(post.subtopic || '')}"`,
+      `"${sanitizeForCSV(post.caption || '')}"`,
+      `"${sanitizeForCSV(post.format)}"`,
+      `"${sanitizeForCSV(post.status)}"`,
+      `"${sanitizeForCSV(post.funnelStatus || '')}"`,
+      `"${sanitizeForCSV(post.visualIdeas || '')}"`,
+      `"${sanitizeForCSV(post.notes || '')}"`
+    ]);
+
+    // Add UTF-8 BOM (\uFEFF) at the beginning for Excel compatibility
+    const csvContent = '\uFEFF' + [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `content_planner_export_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleRestoreOldData = async () => {
     if (isSeeding) return;
     setIsSeeding(true);
@@ -1143,6 +1259,13 @@ export default function App() {
           </button>
           
           <div className="pt-4 mt-4 border-t border-slate-700/50">
+            <button 
+              onClick={() => setViewMode('admin')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${viewMode === 'admin' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-slate-800 hover:text-white text-slate-400'}`}
+            >
+              <ShieldCheck className="w-5 h-5" />
+              Admin Center
+            </button>
             <button className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-800 hover:text-white rounded-xl transition-all text-slate-400">
               <UserIcon className="w-5 h-5" />
               My Account
@@ -1199,7 +1322,7 @@ export default function App() {
         {/* Header */}
         <header className="h-16 bg-white border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-10">
           <h1 className="text-lg font-bold text-slate-800">
-            {viewMode === 'list' ? 'Monthly Table' : viewMode === 'kanban' ? 'Kanban Board' : 'Calendar View'}
+            {viewMode === 'list' ? 'Monthly Table' : viewMode === 'kanban' ? 'Kanban Board' : viewMode === 'calendar' ? 'Calendar View' : 'Admin Center'}
           </h1>
           <div className="flex items-center gap-6">
             <button className="text-slate-400 hover:text-slate-600 transition-colors">
@@ -1213,142 +1336,153 @@ export default function App() {
             {/* Page Title & Actions */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
               <div>
-                <h2 className="text-2xl font-bold text-slate-900">Content Strategy Planner</h2>
-                <p className="text-sm text-slate-500">Plan and manage your content across all channels.</p>
+                <h2 className="text-2xl font-bold text-slate-900">
+                  {viewMode === 'admin' ? 'Admin Center' : 'Content Strategy Planner'}
+                </h2>
+                <p className="text-sm text-slate-500">
+                  {viewMode === 'admin' ? 'Manage system settings and data restoration.' : 'Plan and manage your content across all channels.'}
+                </p>
               </div>
-              <div className="flex items-center gap-3">
-                <button 
-                  onClick={handleRestoreOldData}
-                  disabled={isSeeding}
-                  className="flex items-center gap-2 bg-white border border-slate-200 px-5 py-2.5 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm disabled:opacity-50"
-                >
-                  <Undo2 className="w-4 h-4" />
-                  {isSeeding ? 'Restoring...' : 'Export CSV'}
-                </button>
-                <button 
-                  onClick={() => handleOpenModal()}
-                  className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-slate-900 px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm"
-                >
-                  <Plus className="w-4 h-4" />
-                  Create New Task
-                </button>
-              </div>
-            </div>
-
-            {/* Month Navigation & Filters */}
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-6">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
-                  <button onClick={handlePrevMonth} className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-600 transition-colors">
-                    <ChevronLeft className="w-5 h-5" />
-                  </button>
-                  <div className="px-4 font-bold text-slate-800 min-w-[160px] text-center">
-                    {format(currentMonth, 'MMMM yyyy')}
-                  </div>
-                  <button onClick={handleNextMonth} className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-600 transition-colors">
-                    <ChevronRight className="w-5 h-5" />
-                  </button>
-                </div>
-                <button 
-                  onClick={handleToday}
-                  className="text-sm font-bold text-slate-600 hover:text-amber-600 px-4 py-2 bg-white border border-slate-200 rounded-xl shadow-sm transition-all"
-                >
-                  Today
-                </button>
-              </div>
-
-              <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
-                <div className="relative flex-1 md:w-64">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input 
-                    type="text" 
-                    placeholder="Search content..."
-                    className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all shadow-sm text-sm"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
+              {viewMode !== 'admin' && (
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center bg-white border border-slate-200 p-1 rounded-xl shadow-sm">
-                    <button 
-                      onClick={() => setViewMode('list')}
-                      className={`p-1.5 rounded-lg transition-all ${viewMode === 'list' ? 'bg-slate-100 text-amber-600' : 'text-slate-500 hover:text-slate-700'}`}
-                      title="List View"
-                    >
-                      <LayoutList className="w-4 h-4" />
-                    </button>
-                    <button 
-                      onClick={() => setViewMode('kanban')}
-                      className={`p-1.5 rounded-lg transition-all ${viewMode === 'kanban' ? 'bg-slate-100 text-amber-600' : 'text-slate-500 hover:text-slate-700'}`}
-                      title="Kanban View"
-                    >
-                      <Columns className="w-4 h-4" />
-                    </button>
-                    <button 
-                      onClick={() => setViewMode('calendar')}
-                      className={`p-1.5 rounded-lg transition-all ${viewMode === 'calendar' ? 'bg-slate-100 text-amber-600' : 'text-slate-500 hover:text-slate-700'}`}
-                      title="Calendar View"
-                    >
-                      <CalendarIcon className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <select 
-                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500/20 shadow-sm"
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value as any)}
+                  <button 
+                    onClick={handleExportCSV}
+                    className="flex items-center gap-2 bg-white border border-slate-200 px-5 py-2.5 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm"
                   >
-                    <option value="All">All Statuses</option>
-                    <option value="Not Started">Not Started</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Ready for Review">Ready for Review</option>
-                    <option value="Scheduled">Scheduled</option>
-                  </select>
+                    <Download className="w-4 h-4" />
+                    Export CSV
+                  </button>
+                  <button 
+                    onClick={() => handleOpenModal()}
+                    className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-slate-900 px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Create New Task
+                  </button>
                 </div>
-              </div>
+              )}
             </div>
 
-            {/* View Content */}
-            <div className="min-h-[400px]">
-              {viewMode === 'list' && (
-                <MonthlyTableView 
-                  currentMonth={currentMonth}
-                  tableColumns={tableColumns}
-                  posts={filteredPosts}
-                  handleUpdatePostInline={handleUpdatePostInline}
-                  handleCreateForDate={handleCreateForDate}
-                  showColumnSettings={showColumnSettings}
-                  setShowColumnSettings={setShowColumnSettings}
-                  setTableColumns={setTableColumns}
-                  toggleColumnVisibility={toggleColumnVisibility}
-                  addCustomColumn={addCustomColumn}
-                  sensors={sensors}
-                  handleDragEnd={handleDragEnd}
-                  isColumnsLocked={isColumnsLocked}
-                  setIsColumnsLocked={setIsColumnsLocked}
-                  handleCopy={handleCopy}
-                  copiedId={copiedId}
-                  setPreviewImage={setPreviewImage}
-                  handleOpenModal={handleOpenModal}
-                  handleDeletePost={handleDeletePost}
-                  searchQuery={searchQuery}
-                />
-              )}
-              {viewMode === 'kanban' && (
-                <KanbanView 
-                  filteredPosts={filteredPosts}
-                  setFormData={setFormData}
-                  handleOpenModal={handleOpenModal}
-                />
-              )}
-              {viewMode === 'calendar' && (
-                <CalendarView 
-                  currentMonth={currentMonth}
-                  posts={filteredPosts}
-                  handleCreateForDate={handleCreateForDate}
-                  handleOpenModal={handleOpenModal}
-                />
-              )}
-            </div>
+            {viewMode === 'admin' ? (
+              <AdminView onRestore={handleRestoreOldData} isSeeding={isSeeding} />
+            ) : (
+              <>
+                {/* Month Navigation & Filters */}
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
+                      <button onClick={handlePrevMonth} className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-600 transition-colors">
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+                      <div className="px-4 font-bold text-slate-800 min-w-[160px] text-center">
+                        {format(currentMonth, 'MMMM yyyy')}
+                      </div>
+                      <button onClick={handleNextMonth} className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-600 transition-colors">
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                    </div>
+                    <button 
+                      onClick={handleToday}
+                      className="text-sm font-bold text-slate-600 hover:text-amber-600 px-4 py-2 bg-white border border-slate-200 rounded-xl shadow-sm transition-all"
+                    >
+                      Today
+                    </button>
+                  </div>
+
+                  <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+                    <div className="relative flex-1 md:w-64">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input 
+                        type="text" 
+                        placeholder="Search content..."
+                        className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all shadow-sm text-sm"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center bg-white border border-slate-200 p-1 rounded-xl shadow-sm">
+                        <button 
+                          onClick={() => setViewMode('list')}
+                          className={`p-1.5 rounded-lg transition-all ${viewMode === 'list' ? 'bg-slate-100 text-amber-600' : 'text-slate-500 hover:text-slate-700'}`}
+                          title="List View"
+                        >
+                          <LayoutList className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => setViewMode('kanban')}
+                          className={`p-1.5 rounded-lg transition-all ${viewMode === 'kanban' ? 'bg-slate-100 text-amber-600' : 'text-slate-500 hover:text-slate-700'}`}
+                          title="Kanban View"
+                        >
+                          <Columns className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => setViewMode('calendar')}
+                          className={`p-1.5 rounded-lg transition-all ${viewMode === 'calendar' ? 'bg-slate-100 text-amber-600' : 'text-slate-500 hover:text-slate-700'}`}
+                          title="Calendar View"
+                        >
+                          <CalendarIcon className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <select 
+                        className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500/20 shadow-sm"
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value as any)}
+                      >
+                        <option value="All">All Statuses</option>
+                        <option value="Not Started">Not Started</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Ready for Review">Ready for Review</option>
+                        <option value="Scheduled">Scheduled</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* View Content */}
+                <div className="min-h-[400px]">
+                  {viewMode === 'list' && (
+                    <MonthlyTableView 
+                      currentMonth={currentMonth}
+                      tableColumns={tableColumns}
+                      posts={filteredPosts}
+                      handleUpdatePostInline={handleUpdatePostInline}
+                      handleCreateForDate={handleCreateForDate}
+                      showColumnSettings={showColumnSettings}
+                      setShowColumnSettings={setShowColumnSettings}
+                      setTableColumns={setTableColumns}
+                      toggleColumnVisibility={toggleColumnVisibility}
+                      addCustomColumn={addCustomColumn}
+                      sensors={sensors}
+                      handleDragEnd={handleDragEnd}
+                      isColumnsLocked={isColumnsLocked}
+                      setIsColumnsLocked={setIsColumnsLocked}
+                      handleCopy={handleCopy}
+                      copiedId={copiedId}
+                      setPreviewImage={setPreviewImage}
+                      handleOpenModal={handleOpenModal}
+                      handleDeletePost={handleDeletePost}
+                      searchQuery={searchQuery}
+                    />
+                  )}
+                  {viewMode === 'kanban' && (
+                    <KanbanView 
+                      filteredPosts={filteredPosts}
+                      setFormData={setFormData}
+                      handleOpenModal={handleOpenModal}
+                    />
+                  )}
+                  {viewMode === 'calendar' && (
+                    <CalendarView 
+                      currentMonth={currentMonth}
+                      posts={filteredPosts}
+                      handleCreateForDate={handleCreateForDate}
+                      handleOpenModal={handleOpenModal}
+                    />
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </main>
       </div>
