@@ -48,7 +48,8 @@ import {
   PanelLeftOpen,
   Facebook,
   Instagram,
-  Linkedin
+  Linkedin,
+  Share
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format, formatDistanceToNow, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from 'date-fns';
@@ -175,9 +176,10 @@ interface KanbanViewProps {
   filteredPosts: Post[];
   setFormData: Dispatch<SetStateAction<Partial<Post>>>;
   handleOpenModal: (post?: Post) => void;
+  handleOpenShareModal: (post: Post) => void;
 }
 
-const KanbanView: React.FC<KanbanViewProps> = ({ filteredPosts, setFormData, handleOpenModal }) => {
+const KanbanView: React.FC<KanbanViewProps> = ({ filteredPosts, setFormData, handleOpenModal, handleOpenShareModal }) => {
   const statuses: PostStatus[] = ['Not Started', 'In Progress', 'Ready for Review', 'Scheduled'];
   
   return (
@@ -260,9 +262,10 @@ interface CalendarViewProps {
   posts: Post[];
   handleCreateForDate: (dateStr: string) => Promise<Post | null>;
   handleOpenModal: (post?: Post) => void;
+  handleOpenShareModal: (post: Post) => void;
 }
 
-const CalendarView: React.FC<CalendarViewProps> = ({ currentMonth, posts, handleCreateForDate, handleOpenModal }) => {
+const CalendarView: React.FC<CalendarViewProps> = ({ currentMonth, posts, handleCreateForDate, handleOpenModal, handleOpenShareModal }) => {
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(monthStart);
   const startDate = startOfWeek(monthStart);
@@ -346,6 +349,7 @@ interface MonthlyTableViewProps {
   copiedId: string | null;
   setPreviewImage: (url: string | null) => void;
   handleOpenModal: (post?: Post) => void;
+  handleOpenShareModal: (post: Post) => void;
   handleDeletePost: (id: string) => void;
   searchQuery?: string;
   columnSettingsRef: React.RefObject<HTMLDivElement>;
@@ -371,6 +375,7 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
   copiedId,
   setPreviewImage,
   handleOpenModal,
+  handleOpenShareModal,
   handleDeletePost,
   searchQuery = '',
   columnSettingsRef,
@@ -725,6 +730,13 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button 
+                            onClick={() => handleOpenShareModal(post)}
+                            className="p-1.5 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-indigo-600 transition-colors"
+                            title="Share Details"
+                          >
+                            <Share className="w-4 h-4" />
+                          </button>
+                          <button 
                             onClick={() => handleDeletePost(post.id)}
                             className="p-1.5 hover:bg-rose-50 rounded-lg text-rose-600 transition-colors"
                             title="Delete Post"
@@ -1027,6 +1039,21 @@ const AdminView = ({
   );
 };
 
+const DetailItem = ({ label, value, fullWidth = false, isLink = false }: { label: string, value?: string, fullWidth?: boolean, isLink?: boolean }) => (
+  <div className={`space-y-1 ${fullWidth ? 'col-span-2' : ''}`}>
+    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{label}</p>
+    {isLink && value ? (
+      <a href={value} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-indigo-600 hover:underline flex items-center gap-1 break-all">
+        {value} <ExternalLink className="w-3 h-3" />
+      </a>
+    ) : (
+      <p className="text-sm font-medium text-slate-900 break-words">
+        {value || <span className="italic text-slate-300 font-normal">N/A</span>}
+      </p>
+    )}
+  </div>
+);
+
 export default function App() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [user, setUser] = useState<User | null>(null);
@@ -1037,7 +1064,9 @@ export default function App() {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [currentMonth, setCurrentMonth] = useState(new Date(2026, 3, 1)); // April 2026 based on initial posts
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [editingPost, setEditingPost] = useState<Post | null>(null);
+  const [sharingPost, setSharingPost] = useState<Post | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -1477,6 +1506,11 @@ export default function App() {
       setHistoryIndex(0);
     }
     setIsModalOpen(true);
+  };
+
+  const handleOpenShareModal = (post: Post) => {
+    setSharingPost(post);
+    setIsShareModalOpen(true);
   };
 
   const handleSavePost = async () => {
@@ -2058,6 +2092,7 @@ export default function App() {
                       copiedId={copiedId}
                       setPreviewImage={setPreviewImage}
                       handleOpenModal={handleOpenModal}
+                      handleOpenShareModal={handleOpenShareModal}
                       handleDeletePost={handleDeletePost}
                       searchQuery={searchQuery}
                       columnSettingsRef={columnSettingsRef}
@@ -2069,6 +2104,7 @@ export default function App() {
                       filteredPosts={filteredPosts}
                       setFormData={setFormData}
                       handleOpenModal={handleOpenModal}
+                      handleOpenShareModal={handleOpenShareModal}
                     />
                   )}
                   {viewMode === 'calendar' && (
@@ -2077,6 +2113,7 @@ export default function App() {
                       posts={filteredPosts}
                       handleCreateForDate={handleCreateForDate}
                       handleOpenModal={handleOpenModal}
+                      handleOpenShareModal={handleOpenShareModal}
                     />
                   )}
                 </div>
@@ -2393,6 +2430,129 @@ export default function App() {
                   className="px-6 py-2 bg-amber-500 hover:bg-amber-600 text-slate-900 text-sm font-bold rounded-lg transition-colors shadow-sm"
                 >
                   Save Post
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Share Details Panel */}
+      <AnimatePresence>
+        {isShareModalOpen && sharingPost && (
+          <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/40 backdrop-blur-sm" onClick={() => setIsShareModalOpen(false)}>
+            <motion.div 
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="bg-white w-full max-w-md h-full shadow-2xl flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-indigo-50 rounded-lg">
+                    <Share className="w-5 h-5 text-indigo-600" />
+                  </div>
+                  <h2 className="text-lg font-bold text-slate-900">Post Details</h2>
+                </div>
+                <button 
+                  onClick={() => setIsShareModalOpen(false)}
+                  className="p-1.5 hover:bg-slate-200 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5 text-slate-500" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-8">
+                {/* Social Links Section */}
+                <div className="space-y-3">
+                  <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Social Media Redirection</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {socialLinks.facebook && (
+                      <a href={socialLinks.facebook} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-1.5 bg-[#1877F2]/10 text-[#1877F2] rounded-lg text-xs font-bold hover:bg-[#1877F2]/20 transition-colors">
+                        <Facebook className="w-4 h-4" /> Facebook
+                      </a>
+                    )}
+                    {socialLinks.instagram && (
+                      <a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-1.5 bg-[#E4405F]/10 text-[#E4405F] rounded-lg text-xs font-bold hover:bg-[#E4405F]/20 transition-colors">
+                        <Instagram className="w-4 h-4" /> Instagram
+                      </a>
+                    )}
+                    {socialLinks.linkedin && (
+                      <a href={socialLinks.linkedin} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-1.5 bg-[#0A66C2]/10 text-[#0A66C2] rounded-lg text-xs font-bold hover:bg-[#0A66C2]/20 transition-colors">
+                        <Linkedin className="w-4 h-4" /> LinkedIn
+                      </a>
+                    )}
+                    {!socialLinks.facebook && !socialLinks.instagram && !socialLinks.linkedin && (
+                      <p className="text-[10px] text-slate-400 italic">No social links configured.</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Post Details Section */}
+                <div className="space-y-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <DetailItem label="Date" value={sharingPost.date} />
+                    <DetailItem label="Status" value={sharingPost.status} />
+                    <DetailItem label="Content Title" value={sharingPost.contentTitle} />
+                    <DetailItem label="Content Type" value={sharingPost.contentType} />
+                    <DetailItem label="Format" value={sharingPost.format} />
+                    <DetailItem label="Funnel Status" value={sharingPost.funnelStatus} />
+                  </div>
+                  
+                  <DetailItem label="Topic / Theme" value={sharingPost.topicTheme} fullWidth />
+                  <DetailItem label="Subtopic" value={sharingPost.subtopic} fullWidth />
+                  
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Caption</p>
+                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 text-sm text-slate-700 leading-relaxed whitespace-pre-wrap relative group">
+                      {sharingPost.caption || <span className="italic text-slate-400">No caption provided</span>}
+                      {sharingPost.caption && (
+                        <button 
+                          onClick={() => {
+                            navigator.clipboard.writeText(sharingPost.caption || '');
+                            setCopiedId('caption');
+                            setTimeout(() => setCopiedId(null), 2000);
+                          }}
+                          className="absolute top-2 right-2 p-1.5 bg-white shadow-sm border border-slate-200 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-slate-50"
+                          title="Copy Caption"
+                        >
+                          {copiedId === 'caption' ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3 text-slate-400" />}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {sharingPost.creatives && sharingPost.creatives.length > 0 && (
+                    <div className="space-y-1.5">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Creatives</p>
+                      <div className="flex flex-wrap gap-2">
+                        {sharingPost.creatives.map((url, idx) => (
+                          <img 
+                            key={idx} 
+                            src={url} 
+                            alt={`Creative ${idx}`} 
+                            className="w-20 h-20 object-cover rounded-lg border border-slate-200 shadow-sm cursor-pointer hover:opacity-90 transition-opacity"
+                            onClick={() => setPreviewImage(url)}
+                            referrerPolicy="no-referrer"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <DetailItem label="Visual Ideas" value={sharingPost.visualIdeas} fullWidth isLink />
+                  <DetailItem label="Notes" value={sharingPost.notes} fullWidth />
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-slate-100 bg-slate-50/50">
+                <button 
+                  onClick={() => setIsShareModalOpen(false)}
+                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors shadow-sm"
+                >
+                  Close Panel
                 </button>
               </div>
             </motion.div>
