@@ -1058,6 +1058,7 @@ export default function App() {
     { id: 'notes', label: 'Notes', width: 'w-64', visible: false },
   ]);
 
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form state
@@ -1157,6 +1158,39 @@ export default function App() {
       }, 3000);
     }
   };
+
+  // Paste handler for creatives
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      if (!isModalOpen) return;
+      
+      // Don't process if user is typing in a text area or input
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT') {
+        // If it's an image, we still might want to process it, 
+        // but usually paste in textarea is for text.
+        // However, if there are files in the clipboard, we process them.
+      }
+
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      const files: File[] = [];
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          const file = items[i].getAsFile();
+          if (file) files.push(file);
+        }
+      }
+      
+      if (files.length > 0) {
+        processFiles(files);
+      }
+    };
+
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [isModalOpen]);
 
   const handleMarkAllRead = async () => {
     const unreadNotifs = notifications.filter(n => !n.read);
@@ -1478,11 +1512,9 @@ export default function App() {
     }
   };
 
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-
+  const processFiles = (files: FileList | File[]) => {
     Array.from(files).forEach((file: File) => {
+      if (!file.type.startsWith('image/')) return;
       const reader = new FileReader();
       reader.onloadend = () => {
         setFormData(prev => ({
@@ -1492,6 +1524,28 @@ export default function App() {
       };
       reader.readAsDataURL(file);
     });
+  };
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) processFiles(files);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingOver(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDraggingOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingOver(false);
+    if (e.dataTransfer.files) {
+      processFiles(e.dataTransfer.files);
+    }
   };
 
   const removeCreative = (index: number) => {
@@ -2081,8 +2135,20 @@ export default function App() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-500 uppercase">Creatives</label>
-                  <div className="flex flex-wrap gap-3 p-4 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-slate-500 uppercase">Creatives</label>
+                    <span className="text-[10px] text-slate-400 italic">Drag & drop or paste images here</span>
+                  </div>
+                  <div 
+                    className={`flex flex-wrap gap-3 p-4 border-2 border-dashed rounded-xl transition-all ${
+                      isDraggingOver 
+                        ? 'border-amber-500 bg-amber-50/50 shadow-inner' 
+                        : 'border-slate-200 bg-slate-50/50'
+                    }`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
                     {formData.creatives?.map((creative, idx) => (
                       <div key={idx} className="relative group h-20 w-20 rounded-lg overflow-hidden border border-slate-200 shadow-sm">
                         <img 
