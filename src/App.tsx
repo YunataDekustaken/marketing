@@ -339,6 +339,8 @@ interface MonthlyTableViewProps {
   handleOpenModal: (post?: Post) => void;
   handleDeletePost: (id: string) => void;
   searchQuery?: string;
+  columnSettingsRef: React.RefObject<HTMLDivElement>;
+  highlightedPostId: string | null;
 }
 
 const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
@@ -361,7 +363,9 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
   setPreviewImage,
   handleOpenModal,
   handleDeletePost,
-  searchQuery = ''
+  searchQuery = '',
+  columnSettingsRef,
+  highlightedPostId
 }) => {
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(monthStart);
@@ -552,7 +556,7 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
           <LayoutList className="w-4 h-4 text-slate-400" />
           <span className="text-sm font-semibold text-slate-700">Monthly Table</span>
         </div>
-        <div className="relative">
+        <div className="relative" ref={columnSettingsRef}>
           <button 
             onClick={() => setShowColumnSettings(!showColumnSettings)}
             className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"
@@ -692,7 +696,11 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
                   }
 
                   return dayPosts.map((post, pIdx) => (
-                    <tr key={post.id} className={`group hover:bg-slate-50/50 transition-colors ${isToday ? 'bg-amber-50/20' : ''}`}>
+                    <tr 
+                      key={post.id} 
+                      id={`post-${post.id}`}
+                      className={`group hover:bg-slate-50/50 transition-all duration-500 ${isToday ? 'bg-amber-50/20' : ''} ${highlightedPostId === post.id ? 'bg-amber-100 ring-2 ring-amber-500 ring-inset shadow-lg scale-[1.01] z-10' : ''}`}
+                    >
                       {visibleColumns.map((col) => (
                         <td key={col.id} className="px-4 py-3 align-top">
                           {renderCell(post, col.id, day, pIdx)}
@@ -727,9 +735,118 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
   );
 };
 
-const AdminView = ({ onRestore, isSeeding }: { onRestore: () => void, isSeeding: boolean }) => {
+const AdminView = ({ 
+  onRestore, 
+  isSeeding, 
+  settings, 
+  onToggleSetting 
+}: { 
+  onRestore: () => void, 
+  isSeeding: boolean,
+  settings: any,
+  onToggleSetting: (key: string) => void
+}) => {
   return (
     <div className="space-y-6">
+      <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200">
+        <div className="flex items-center gap-4 mb-8">
+          <div className="p-3 bg-amber-50 rounded-xl">
+            <Bell className="w-6 h-6 text-amber-500" />
+          </div>
+          <h3 className="text-xl font-bold text-slate-900">Notification Settings</h3>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-6">
+            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">System Events</h4>
+            <div className="space-y-4">
+              <label className="flex items-center justify-between cursor-pointer group">
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-slate-700 group-hover:text-slate-900 transition-colors">Export CSV</span>
+                  <span className="text-[10px] text-slate-400">Notify when CSV export is completed</span>
+                </div>
+                <div 
+                  onClick={() => onToggleSetting('onExportCSV')}
+                  className={`w-10 h-5 rounded-full relative transition-all ${settings.onExportCSV ? 'bg-amber-500' : 'bg-slate-200'}`}
+                >
+                  <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.onExportCSV ? 'right-1' : 'left-1'}`} />
+                </div>
+              </label>
+
+              <label className="flex items-center justify-between cursor-pointer group">
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-slate-700 group-hover:text-slate-900 transition-colors">New Task Created</span>
+                  <span className="text-[10px] text-slate-400">Notify when a new content task is added</span>
+                </div>
+                <div 
+                  onClick={() => onToggleSetting('onNewTask')}
+                  className={`w-10 h-5 rounded-full relative transition-all ${settings.onNewTask ? 'bg-amber-500' : 'bg-slate-200'}`}
+                >
+                  <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.onNewTask ? 'right-1' : 'left-1'}`} />
+                </div>
+              </label>
+
+              <label className="flex items-center justify-between cursor-pointer group">
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-slate-700 group-hover:text-slate-900 transition-colors">Task Deleted</span>
+                  <span className="text-[10px] text-slate-400">Notify when a task is permanently removed</span>
+                </div>
+                <div 
+                  onClick={() => onToggleSetting('onTaskDeleted')}
+                  className={`w-10 h-5 rounded-full relative transition-all ${settings.onTaskDeleted ? 'bg-amber-500' : 'bg-slate-200'}`}
+                >
+                  <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.onTaskDeleted ? 'right-1' : 'left-1'}`} />
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Status Updates</h4>
+            <div className="space-y-4">
+              <label className="flex items-center justify-between cursor-pointer group">
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-slate-700 group-hover:text-slate-900 transition-colors">Scheduled</span>
+                  <span className="text-[10px] text-slate-400">Notify when content is marked as Scheduled</span>
+                </div>
+                <div 
+                  onClick={() => onToggleSetting('onStatusScheduled')}
+                  className={`w-10 h-5 rounded-full relative transition-all ${settings.onStatusScheduled ? 'bg-amber-500' : 'bg-slate-200'}`}
+                >
+                  <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.onStatusScheduled ? 'right-1' : 'left-1'}`} />
+                </div>
+              </label>
+
+              <label className="flex items-center justify-between cursor-pointer group">
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-slate-700 group-hover:text-slate-900 transition-colors">Ready for Review</span>
+                  <span className="text-[10px] text-slate-400">Notify when content is ready for approval</span>
+                </div>
+                <div 
+                  onClick={() => onToggleSetting('onStatusReadyForReview')}
+                  className={`w-10 h-5 rounded-full relative transition-all ${settings.onStatusReadyForReview ? 'bg-amber-500' : 'bg-slate-200'}`}
+                >
+                  <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.onStatusReadyForReview ? 'right-1' : 'left-1'}`} />
+                </div>
+              </label>
+
+              <label className="flex items-center justify-between cursor-pointer group">
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-slate-700 group-hover:text-slate-900 transition-colors">AI Generation</span>
+                  <span className="text-[10px] text-slate-400">Notify when AI caption generation is finished</span>
+                </div>
+                <div 
+                  onClick={() => onToggleSetting('onAICaption')}
+                  className={`w-10 h-5 rounded-full relative transition-all ${settings.onAICaption ? 'bg-amber-500' : 'bg-slate-200'}`}
+                >
+                  <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.onAICaption ? 'right-1' : 'left-1'}`} />
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200">
         <div className="flex items-center gap-4 mb-6">
           <div className="p-3 bg-rose-50 rounded-xl">
@@ -832,6 +949,85 @@ export default function App() {
   const [captionHistory, setCaptionHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [error, setError] = useState<string | null>(null);
+  const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([
+    { id: '1', title: 'New Task Created', message: 'A new task "Spring Campaign" has been added.', time: '5m ago', read: false },
+    { id: '2', title: 'Data Restored', message: 'Initial dataset has been successfully restored.', time: '1h ago', read: true },
+    { id: '3', title: 'Export Successful', message: 'Your CSV export is ready for download.', time: '2h ago', read: true },
+  ]);
+
+  const [notifSettings, setNotifSettings] = useState({
+    onExportCSV: true,
+    onStatusScheduled: true,
+    onStatusReadyForReview: true,
+    onNewTask: true,
+    onTaskDeleted: true,
+    onAICaption: true,
+  });
+
+  const addNotification = (type: keyof typeof notifSettings, title: string, message: string, postId?: string) => {
+    if (!notifSettings[type]) return;
+    
+    const newNotif = {
+      id: Date.now().toString(),
+      title,
+      message,
+      time: 'Just now',
+      read: false,
+      postId
+    };
+    setNotifications(prev => [newNotif, ...prev]);
+  };
+
+  const handleNotificationClick = (notif: any) => {
+    // Mark as read
+    setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
+    
+    if (notif.postId) {
+      // Switch to list view if not already there
+      if (viewMode !== 'list') {
+        setViewMode('list');
+      }
+      
+      // Clear search query to ensure the post is visible
+      setSearchQuery('');
+      
+      // Highlight the post
+      setHighlightedPostId(notif.postId);
+      setShowNotifications(false);
+      
+      // Scroll to the post
+      setTimeout(() => {
+        const element = document.getElementById(`post-${notif.postId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+
+      // Clear highlight after 3 seconds
+      setTimeout(() => {
+        setHighlightedPostId(null);
+      }, 3000);
+    }
+  };
+
+  const notificationRef = useRef<HTMLDivElement>(null);
+  const columnSettingsRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
+      }
+      if (columnSettingsRef.current && !columnSettingsRef.current.contains(event.target as Node)) {
+        setShowColumnSettings(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Auth Listener
   useEffect(() => {
@@ -896,6 +1092,14 @@ export default function App() {
     try {
       const postRef = doc(db, 'posts', id);
       await updateDoc(postRef, { [field]: value });
+
+      if (field === 'status') {
+        if (value === 'Scheduled') {
+          addNotification('onStatusScheduled', 'Status Updated', 'A task has been marked as Scheduled.', id);
+        } else if (value === 'Ready for Review') {
+          addNotification('onStatusReadyForReview', 'Ready for Review', 'A task is now ready for your approval.', id);
+        }
+      }
     } catch (err) {
       handleFirestoreError(err, OperationType.UPDATE, `posts/${id}`);
     }
@@ -1022,6 +1226,9 @@ export default function App() {
 
     try {
       await setDoc(doc(db, 'posts', id), postData);
+      if (!editingPost) {
+        addNotification('onNewTask', 'New Task Created', `"${formData.topicTheme || 'Untitled'}" has been added to the plan.`, id);
+      }
       setIsModalOpen(false);
     } catch (err) {
       handleFirestoreError(err, OperationType.WRITE, `posts/${id}`);
@@ -1031,6 +1238,7 @@ export default function App() {
   const handleDeletePost = async (id: string) => {
     try {
       await deleteDoc(doc(db, 'posts', id));
+      addNotification('onTaskDeleted', 'Task Deleted', 'A content task has been permanently removed.');
       if (editingPost?.id === id) {
         setIsModalOpen(false);
       }
@@ -1105,6 +1313,7 @@ export default function App() {
         customPrompt: formData.customPrompt || '',
       });
       updateCaption(caption);
+      addNotification('onAICaption', 'AI Generation Complete', 'Your content caption has been generated successfully.', formData.id);
     } catch (error) {
       alert('Failed to generate caption. Please check your API key.');
     } finally {
@@ -1193,6 +1402,7 @@ export default function App() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    addNotification('onExportCSV', 'Export Successful', `Your CSV export for ${format(currentMonth, 'MMMM yyyy')} is ready.`);
   };
 
   const handleRestoreOldData = async () => {
@@ -1205,7 +1415,7 @@ export default function App() {
         return setDoc(doc(db, 'posts', post.id), postData);
       });
       await Promise.all(batchPromises);
-      alert('Old data restored and saved to database!');
+      addNotification('onNewTask', 'Data Restored', 'Initial dataset has been successfully restored.');
     } catch (err) {
       handleFirestoreError(err, OperationType.WRITE, 'posts/batch');
     } finally {
@@ -1325,9 +1535,77 @@ export default function App() {
             {viewMode === 'list' ? 'Monthly Table' : viewMode === 'kanban' ? 'Kanban Board' : viewMode === 'calendar' ? 'Calendar View' : 'Admin Center'}
           </h1>
           <div className="flex items-center gap-6">
-            <button className="text-slate-400 hover:text-slate-600 transition-colors">
-              <Bell className="w-5 h-5" />
-            </button>
+            <div className="relative" ref={notificationRef}>
+              <button 
+                onClick={() => setShowNotifications(!showNotifications)}
+                className={`relative p-2 rounded-full transition-all ${showNotifications ? 'bg-slate-100 text-amber-600' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}
+              >
+                <Bell className="w-5 h-5" />
+                {notifications.some(n => !n.read) && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white" />
+                )}
+              </button>
+
+              <AnimatePresence>
+                {showNotifications && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute right-0 mt-2 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden z-50"
+                  >
+                    <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                      <h3 className="font-bold text-slate-800 text-sm">Notifications</h3>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => setNotifications(notifications.map(n => ({ ...n, read: true })))}
+                          className="text-[10px] font-bold text-amber-600 hover:text-amber-700 uppercase tracking-wider"
+                        >
+                          Mark all read
+                        </button>
+                      </div>
+                    </div>
+                    <div className="max-h-[320px] overflow-y-auto no-scrollbar">
+                      {notifications.length > 0 ? (
+                        <div className="divide-y divide-slate-50">
+                          {notifications.map(n => (
+                            <div 
+                              key={n.id} 
+                              className={`p-4 hover:bg-slate-50 transition-colors cursor-pointer relative ${!n.read ? 'bg-amber-50/30' : ''}`}
+                              onClick={() => handleNotificationClick(n)}
+                            >
+                              {!n.read && <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500" />}
+                              <div className="flex justify-between items-start mb-1">
+                                <h4 className={`text-xs font-bold ${n.read ? 'text-slate-700' : 'text-slate-900'}`}>{n.title}</h4>
+                                <span className="text-[9px] text-slate-400 font-medium">{n.time}</span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 leading-relaxed">{n.message}</p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="p-8 text-center">
+                          <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <Bell className="w-6 h-6 text-slate-300" />
+                          </div>
+                          <p className="text-xs text-slate-400 font-medium">No new notifications</p>
+                        </div>
+                      )}
+                    </div>
+                    {notifications.length > 0 && (
+                      <div className="p-3 border-t border-slate-100 bg-slate-50/50 text-center">
+                        <button 
+                          onClick={() => setNotifications([])}
+                          className="text-[10px] font-bold text-slate-400 hover:text-rose-500 uppercase tracking-wider transition-colors"
+                        >
+                          Clear all notifications
+                        </button>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </header>
 
@@ -1364,7 +1642,12 @@ export default function App() {
             </div>
 
             {viewMode === 'admin' ? (
-              <AdminView onRestore={handleRestoreOldData} isSeeding={isSeeding} />
+              <AdminView 
+                onRestore={handleRestoreOldData} 
+                isSeeding={isSeeding} 
+                settings={notifSettings}
+                onToggleSetting={(key) => setNotifSettings(prev => ({ ...prev, [key]: !prev[key as keyof typeof notifSettings] }))}
+              />
             ) : (
               <>
                 {/* Month Navigation & Filters */}
@@ -1463,6 +1746,8 @@ export default function App() {
                       handleOpenModal={handleOpenModal}
                       handleDeletePost={handleDeletePost}
                       searchQuery={searchQuery}
+                      columnSettingsRef={columnSettingsRef}
+                      highlightedPostId={highlightedPostId}
                     />
                   )}
                   {viewMode === 'kanban' && (
