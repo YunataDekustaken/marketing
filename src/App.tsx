@@ -673,7 +673,7 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
                     {visibleColumns.map((col) => (
                       <SortableHeader key={col.id.toString()} col={col} isLocked={isColumnsLocked} />
                     ))}
-                    <th className="w-24 px-4 py-3 sticky right-0 bg-slate-50/50 border-l border-slate-200">
+                    <th className="w-36 px-4 py-3 sticky right-0 bg-slate-50/50 border-l border-slate-200">
                     </th>
                   </tr>
                 </SortableContext>
@@ -1058,6 +1058,9 @@ export default function App() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [loadingMessage, setLoadingMessage] = useState('Initializing Workspace');
   const [isSeeding, setIsSeeding] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<PostStatus | 'All'>('All');
@@ -1276,7 +1279,45 @@ export default function App() {
       setUser(currentUser);
       setIsAuthReady(true);
     });
-    return () => unsubscribe();
+    
+    // Simulated loading progress
+    const messages = [
+      'Initializing Workspace',
+      'Connecting to Database',
+      'Loading Content Assets',
+      'Synchronizing Planner',
+      'Finalizing Setup'
+    ];
+    
+    let currentStep = 0;
+    const progressInterval = setInterval(() => {
+      setLoadingProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(progressInterval);
+          return 100;
+        }
+        
+        const nextProgress = prev + Math.random() * 12;
+        const step = Math.floor(nextProgress / 20);
+        if (step > currentStep && step < messages.length) {
+          currentStep = step;
+          setLoadingMessage(messages[step]);
+        }
+        
+        return nextProgress > 100 ? 100 : nextProgress;
+      });
+    }, 250);
+
+    // Minimum splash duration for polished feel
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 2500);
+
+    return () => {
+      unsubscribe();
+      clearTimeout(timer);
+      clearInterval(progressInterval);
+    };
   }, []);
 
   // Notifications Listener
@@ -1742,10 +1783,92 @@ export default function App() {
     }
   };
 
-  if (!isAuthReady) {
+  if (!isAuthReady || showSplash) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-amber-600 animate-spin" />
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center relative overflow-hidden">
+        {/* Decorative Background Elements */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-amber-500/5 blur-[120px] rounded-full" />
+        <div className="absolute -top-24 -left-24 w-64 h-64 bg-indigo-500/5 blur-[80px] rounded-full" />
+        
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          className="relative z-10 flex flex-col items-center"
+        >
+          <motion.div 
+            initial={{ scale: 0.8 }}
+            animate={{ scale: 1 }}
+            transition={{ 
+              type: "spring", 
+              stiffness: 200, 
+              damping: 15,
+              delay: 0.1 
+            }}
+            className="w-24 h-24 bg-gradient-to-br from-amber-400 to-amber-600 rounded-2xl shadow-2xl shadow-amber-500/20 flex items-center justify-center mb-8 relative"
+          >
+            <div className="absolute -right-2 -top-2 bg-white rounded-lg p-1.5 shadow-lg border border-slate-100">
+              <Sparkles className="w-5 h-5 text-amber-500" />
+            </div>
+            <span className="text-white font-black text-2xl tracking-tighter">STLAF</span>
+          </motion.div>
+          
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="text-center"
+          >
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight mb-3">
+              Content <span className="text-amber-500">Planner</span>
+            </h1>
+            
+            <div className="flex flex-col items-center gap-4">
+              <div className="flex items-center justify-center gap-3 text-slate-500 text-[10px] font-bold uppercase tracking-[0.3em]">
+                <div className="flex gap-1">
+                  <motion.div 
+                    animate={{ scaleY: [1, 1.5, 1] }} 
+                    transition={{ repeat: Infinity, duration: 0.6, delay: 0 }}
+                    className="w-0.5 h-3 bg-amber-500/60 rounded-full" 
+                  />
+                  <motion.div 
+                    animate={{ scaleY: [1, 1.5, 1] }} 
+                    transition={{ repeat: Infinity, duration: 0.6, delay: 0.2 }}
+                    className="w-0.5 h-3 bg-amber-500/60 rounded-full" 
+                  />
+                  <motion.div 
+                    animate={{ scaleY: [1, 1.5, 1] }} 
+                    transition={{ repeat: Infinity, duration: 0.6, delay: 0.4 }}
+                    className="w-0.5 h-3 bg-amber-500/60 rounded-full" 
+                  />
+                </div>
+                {loadingMessage}
+              </div>
+
+              {/* Progress Bar */}
+              <div className="w-48 h-1 bg-slate-200 rounded-full overflow-hidden relative">
+                <motion.div 
+                  className="absolute inset-y-0 left-0 bg-amber-500"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${loadingProgress}%` }}
+                  transition={{ type: "spring", stiffness: 50, damping: 20 }}
+                />
+              </div>
+              <span className="text-[9px] font-bold text-slate-400 tabular-nums">
+                {Math.round(loadingProgress)}%
+              </span>
+            </div>
+          </motion.div>
+        </motion.div>
+        
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.8 }}
+          className="absolute bottom-12 text-slate-400 text-[10px] font-bold uppercase tracking-widest"
+        >
+          Powered by Gemini AI
+        </motion.div>
       </div>
     );
   }
@@ -1756,12 +1879,12 @@ export default function App() {
       <aside 
         onMouseEnter={() => isSidebarCollapsed && setIsSidebarHovered(true)}
         onMouseLeave={() => setIsSidebarHovered(false)}
-        className={`${isSidebarCollapsed && !isSidebarHovered ? 'w-20' : 'w-64'} bg-primary-dark text-slate-300 flex flex-col shrink-0 transition-all duration-300 ease-in-out relative z-30 shadow-2xl`}
+        className={`${isSidebarCollapsed && !isSidebarHovered ? 'w-20' : 'w-64'} bg-primary-dark text-slate-300 flex flex-col shrink-0 transition-[width] duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] relative z-30 shadow-2xl`}
       >
-        <div className={`px-4 pt-4 flex ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'justify-end'}`}>
+        <div className={`px-4 pt-4 flex ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'justify-start'}`}>
           <button 
             onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-all"
+            className="p-2 hover:bg-slate-700/50 rounded-lg text-slate-400 hover:text-white transition-all duration-300 ease-out"
             title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
           >
             {isSidebarCollapsed ? <PanelLeftOpen className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
@@ -1769,8 +1892,13 @@ export default function App() {
         </div>
 
         <div className={`p-6 pt-2 flex items-center ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'gap-3'}`}>
-          <div className="px-3 h-10 bg-amber-500 rounded-lg flex items-center justify-center text-white font-bold text-lg tracking-tight shrink-0">
-            STLAF
+          <div className="relative shrink-0">
+            <div className="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center text-white font-bold text-xs tracking-tighter">
+              STLAF
+            </div>
+            <div className="absolute -right-1.5 -top-1.5 bg-white rounded-lg p-1 shadow-sm border border-slate-100">
+              <Sparkles className="w-3 h-3 text-amber-500" />
+            </div>
           </div>
           {(!isSidebarCollapsed || isSidebarHovered) && (
             <motion.div
@@ -1787,7 +1915,7 @@ export default function App() {
         <nav className="flex-1 px-3 space-y-1 mt-4 overflow-hidden">
           <button 
             onClick={() => setViewMode('list')}
-            className={`w-full flex items-center ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all ${viewMode === 'list' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white hover:text-primary-dark text-slate-400'}`}
+            className={`w-full flex items-center ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all duration-300 ease-in-out ${viewMode === 'list' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white/10 hover:text-white text-slate-400'}`}
             title={isSidebarCollapsed && !isSidebarHovered ? "Monthly Table" : ""}
           >
             <LayoutList className="w-5 h-5 shrink-0" />
@@ -1795,7 +1923,7 @@ export default function App() {
           </button>
           <button 
             onClick={() => setViewMode('kanban')}
-            className={`w-full flex items-center ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all ${viewMode === 'kanban' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white hover:text-primary-dark text-slate-400'}`}
+            className={`w-full flex items-center ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all duration-300 ease-in-out ${viewMode === 'kanban' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white/10 hover:text-white text-slate-400'}`}
             title={isSidebarCollapsed && !isSidebarHovered ? "Kanban Board" : ""}
           >
             <Columns className="w-5 h-5 shrink-0" />
@@ -1803,7 +1931,7 @@ export default function App() {
           </button>
           <button 
             onClick={() => setViewMode('calendar')}
-            className={`w-full flex items-center ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all ${viewMode === 'calendar' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white hover:text-primary-dark text-slate-400'}`}
+            className={`w-full flex items-center ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all duration-300 ease-in-out ${viewMode === 'calendar' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white/10 hover:text-white text-slate-400'}`}
             title={isSidebarCollapsed && !isSidebarHovered ? "Calendar View" : ""}
           >
             <CalendarIcon className="w-5 h-5 shrink-0" />
@@ -1813,7 +1941,7 @@ export default function App() {
           <div className="pt-4 mt-4 border-t border-slate-700/50">
             <button 
               onClick={() => setViewMode('admin')}
-              className={`w-full flex items-center ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all ${viewMode === 'admin' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white hover:text-primary-dark text-slate-400'}`}
+              className={`w-full flex items-center ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all duration-300 ease-in-out ${viewMode === 'admin' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white/10 hover:text-white text-slate-400'}`}
               title={isSidebarCollapsed && !isSidebarHovered ? "Admin Center" : ""}
             >
               <ShieldCheck className="w-5 h-5 shrink-0" />
@@ -1861,6 +1989,14 @@ export default function App() {
               {(!isSidebarCollapsed || isSidebarHovered) && <span className="whitespace-nowrap">Sign In</span>}
             </button>
           )}
+        </div>
+
+        {/* Branding Footer */}
+        <div className={`px-4 pb-6 mt-auto flex flex-col items-center ${isSidebarCollapsed && !isSidebarHovered ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}>
+          <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-widest">
+            <Sparkles className="w-2.5 h-2.5 text-amber-500/60" />
+            <span>Powered by Gemini AI</span>
+          </div>
         </div>
       </aside>
 
